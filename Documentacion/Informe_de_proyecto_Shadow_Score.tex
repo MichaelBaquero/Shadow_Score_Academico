@@ -1,0 +1,224 @@
+\documentclass[12pt, spanish]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage{amsmath, amssymb}
+\usepackage{geometry}
+\geometry{left=2.5cm, right=2.5cm, top=2.5cm, bottom=2.5cm}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=blue,
+}
+
+\title{Informe de Proyecto: Shadow-Score Académico}
+\author{Equipo de desarrollo}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+El proyecto \textbf{Shadow-Score Académico} surge como una herramienta tecnológica para visibilizar y cuantificar el impacto de la carga doméstica no remunerada en el rendimiento académico de estudiantes universitarios, con un enfoque diferencial por género y estrato socioeconómico. Enmarcado en el ODS 5 (Igualdad de Género) y su meta 5.4, la solución consiste en un simulador interactivo basado en \textbf{Streamlit} que calcula un índice de penalización y proyecta escenarios de corresponsabilidad mediante la comparación de ``gemelos digitales''. Este informe detalla la propuesta técnica, el flujo de trabajo y el plan de desarrollo.
+\end{abstract}
+
+\section{Introducción}
+
+El proyecto \textbf{Shadow-Score Académico} surge como una herramienta tecnológica para visibilizar y cuantificar el impacto de la carga doméstica no remunerada en el rendimiento académico de estudiantes universitarios, con un enfoque diferencial por género y estrato socioeconómico. Enmarcado en el \textbf{ODS 5 (Igualdad de Género)} y particularmente en la meta \textbf{5.4} (reconocimiento y redistribución del trabajo doméstico y de cuidados no remunerado), el proyecto busca evidenciar la ``pobreza de tiempo'' que afecta desproporcionadamente a las mujeres de estratos bajos en Colombia.
+
+La solución consiste en un \textbf{simulador interactivo} que, a partir de datos personales y de uso del tiempo, calcula un índice de penalización (Shadow-Score) y proyecta escenarios de corresponsabilidad mediante la comparación de ``gemelos digitales''. Este informe detalla la propuesta técnica, el flujo de trabajo y el plan de desarrollo para construir un producto robusto y escalable, utilizando \textbf{Streamlit} como plataforma principal.
+
+\section{Objetivos}
+
+\subsection{Objetivo general}
+Desarrollar una aplicación web interactiva que permita a estudiantes universitarios estimar el efecto de la carga doméstica en su rendimiento académico y visualizar el potencial beneficio de una distribución equitativa de las tareas del hogar.
+
+\subsection{Objetivos específicos}
+\begin{itemize}
+    \item Implementar un modelo matemático de penalización basado en fatiga cognitiva y costo de oportunidad.
+    \item Diseñar una interfaz de usuario intuitiva para la captura de datos (género, estrato, horas domésticas, horas de estudio, promedio actual).
+    \item Calcular en tiempo real el Shadow-Score, la fatiga cognitiva, las horas de estudio efectivas y el promedio estimado.
+    \item Simular un escenario de corresponsabilidad (reducción de carga doméstica) y mostrar la comparación con la situación actual.
+    \item Visualizar los resultados mediante gráficos claros (barras, medidores, batería cognitiva) que faciliten la comprensión del fenómeno.
+    \item Permitir la exportación de resultados (opcional) y, en futuras versiones, almacenar datos anónimos para investigación.
+\end{itemize}
+
+\section{Descripción de la solución}
+
+La aplicación se construirá íntegramente en Python utilizando \textbf{Streamlit}, un framework que convierte scripts en aplicaciones web interactivas sin necesidad de conocimientos de frontend. La lógica de negocio residirá en módulos separados, garantizando mantenibilidad y posibilidad de reutilización (por ejemplo, para una futura API).
+
+\subsection{Componentes principales}
+
+\begin{enumerate}
+    \item \textbf{Módulo de modelo matemático} (\texttt{modelo.py}):
+    \begin{itemize}
+        \item Funciones para calcular carga total, fatiga cognitiva (con ajustes por género y estrato), horas de estudio efectivas, promedio estimado y Shadow-Score.
+        \item Parámetros basados en estudios sociológicos colombianos (encuestas de uso del tiempo del DANE, investigaciones sobre rendimiento académico).
+    \end{itemize}
+    \item \textbf{Módulo de utilidades} (\texttt{utils.py}):
+    \begin{itemize}
+        \item Validaciones de entrada (ej. suma de horas \(\leq 168\)).
+        \item Formateo de números y mensajes.
+        \item Funciones de ayuda para gráficos.
+    \end{itemize}
+    \item \textbf{Aplicación principal} (\texttt{app.py}):
+    \begin{itemize}
+        \item Interfaz de usuario con formularios, botones y áreas de resultados.
+        \item Uso de \texttt{st.session\_state} para mantener el estado entre interacciones (actual vs. simulado).
+        \item Visualizaciones con \texttt{st.metric}, \texttt{st.progress}, \texttt{st.plotly\_chart} (gráficos de Plotly) y componentes personalizados como medidores de batería.
+    \end{itemize}
+    \item \textbf{Configuración y estilos} (\texttt{.streamlit/config.toml}):
+    \begin{itemize}
+        \item Personalización del tema (colores institucionales, tipografía) y disposición de la página.
+    \end{itemize}
+\end{enumerate}
+
+\section{Modelo matemático (resumen)}
+
+El modelo se basa en los siguientes pasos:
+
+\begin{itemize}
+    \item \textbf{Carga doméstica total}: suma de horas semanales en limpieza, cocina, lavado y cuidados directos.
+    \item \textbf{Fatiga cognitiva}: función sigmoidea que transforma la carga en un índice entre 0 y 1, con parámetros que dependen del género (mayor pendiente para mujeres) y estrato (mayor factor para estratos bajos).
+    \item \textbf{Horas de estudio efectivas}: horas de estudio declaradas multiplicadas por \((1 - \text{fatiga})\).
+    \item \textbf{Estimación del promedio (PPA)}: regresión lineal con coeficientes calibrados, que incluye horas efectivas, estrato, género, número de dependientes e interacción género-fatiga.
+    \item \textbf{Shadow-Score}: normalización de la pérdida de PPA respecto a un máximo teórico, combinada con la carga total.
+\end{itemize}
+
+Este modelo es transparente y ajustable a medida que se disponga de más datos.
+
+\section{Flujo de usuario (workflow)}
+
+El usuario interactúa con la aplicación de la siguiente manera:
+
+\begin{enumerate}
+    \item \textbf{Página de inicio}: presentación del proyecto y su propósito.
+    \item \textbf{Formulario de entrada} (barra lateral o panel izquierdo):
+    \begin{itemize}
+        \item Selección de género.
+        \item Deslizador para estrato (1-6).
+        \item Número de dependientes (hijos, adultos mayores, etc.).
+        \item Horas semanales en cada tarea doméstica (campos numéricos con paso de 0.5).
+        \item Horas de estudio semanales.
+        \item Promedio actual (opcional).
+    \end{itemize}
+    \item \textbf{Cálculo}: al presionar ``Calcular mi Shadow-Score'', se ejecutan las funciones del modelo y se muestran los resultados.
+    \item \textbf{Visualización de resultados}:
+    \begin{itemize}
+        \item Shadow-Score con barra de progreso y etiqueta cualitativa.
+        \item Fatiga cognitiva representada como un medidor circular (batería).
+        \item Horas de estudio efectivas comparadas con las declaradas.
+        \item Promedio estimado (y diferencia con el actual, si se ingresó).
+        \item Gráfico de radar con las horas dedicadas a cada tarea.
+    \end{itemize}
+    \item \textbf{Simulación de corresponsabilidad}:
+    \begin{itemize}
+        \item Botón ``Simular corresponsabilidad'' que reduce las horas domésticas en un porcentaje definido (ej. 40\%, basado en metas ODS).
+        \item Se muestran dos columnas: \textbf{Escenario actual} vs. \textbf{Escenario con corresponsabilidad}, con métricas comparativas y flechas indicando mejora.
+    \end{itemize}
+    \item \textbf{Información adicional}: un expander con la metodología y fuentes.
+\end{enumerate}
+
+\section{Arquitectura técnica}
+
+\subsection{Tecnologías utilizadas}
+\begin{table}[H]
+\centering
+\begin{tabular}{ll}
+\toprule
+\textbf{Tecnología} & \textbf{Uso} \\
+\midrule
+Python 3.10+ & Lenguaje base \\
+Streamlit & Interfaz de usuario y lógica de presentación \\
+Pandas & Manejo de datos (si se requiere) \\
+Plotly & Gráficos interactivos \\
+NumPy & Operaciones matemáticas \\
+Streamlit-extras & Componentes adicionales (gauge, métricas) \\
+Git / GitHub & Control de versiones \\
+Streamlit Cloud & Despliegue continuo \\
+\bottomrule
+\end{tabular}
+\caption{Tecnologías empleadas en el proyecto}
+\end{table}
+
+\subsection{Estructura de carpetas propuesta}
+\begin{verbatim}
+shadow-score/
++-- .streamlit/
+    +-- config.toml          # Configuración de tema
++-- src/
+    +-- __init__.py
+    +-- modelo.py             # Funciones de cálculo
+    +-- utils.py              # Validaciones y helpers
+    +-- graficos.py           # Funciones para generar gráficos
++-- assets/
+    +-- logo.png              # Imagen institucional
+    +-- estilo.css            # (opcional) estilos adicionales
++-- app.py                    # Punto de entrada de la aplicación
++-- requirements.txt          # Dependencias
++-- README.md                 # Documentación
++-- .gitignore
+\end{verbatim}
+
+\section{Plan de desarrollo (cronograma)}
+
+A continuación se presenta un plan detallado con hitos clave. Aunque originalmente se consideró un plazo hasta el 21 de mayo, aquí se plantea un desarrollo completo y de calidad, que puede ejecutarse en aproximadamente \textbf{12 semanas} con dedicación parcial. El cronograma es flexible y puede adaptarse según la disponibilidad.
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{clp{8cm}}
+\toprule
+\textbf{Semana} & \textbf{Fase} & \textbf{Actividades} \\
+\midrule
+1 & Investigación y definición & Revisar estudios colombianos sobre uso del tiempo y rendimiento académico. Definir coeficientes iniciales del modelo. Establecer funcionalidades core del MVP. \\
+2 & Diseño del modelo matemático & Implementar en Python las funciones de carga, fatiga, horas efectivas, estimación de PPA y Shadow-Score. Pruebas unitarias con datos simulados. \\
+3 & Configuración del entorno y prototipo básico & Crear repositorio Git. Instalar dependencias. Desarrollar primera versión de \texttt{app.py} con formulario simple y visualización de resultados en texto. \\
+4 & Mejora de la interfaz & Integrar el modelo con la interfaz. Añadir sliders y selectores. Implementar validaciones y mensajes de error. Usar \texttt{st.form} para agrupar entradas. \\
+5 & Visualizaciones & Incorporar gráficos de Plotly: medidor de fatiga, barras de horas, radar de tareas. Configurar \texttt{st.progress} para Shadow-Score. \\
+6 & Simulación de corresponsabilidad & Implementar botón de simulación y lógica de reducción de horas. Mostrar comparación lado a lado con dos columnas y métricas destacadas. \\
+7 & Pruebas de usuario y ajustes & Realizar pruebas con compañeros o potenciales usuarios. Recoger feedback sobre claridad, utilidad y bugs. Ajustar textos, colores y disposición. \\
+8 & Optimización y caché & Aplicar \texttt{@st.cache\_data} en funciones costosas. Mejorar tiempos de respuesta. Refinar el modelo con feedback. \\
+9 & Documentación y ayuda & Redactar expander con ``¿Cómo funciona?''. Agregar enlaces a fuentes. Mejorar README. \\
+10 & Despliegue & Configurar Streamlit Cloud, conectar con GitHub. Probar en diferentes dispositivos. Asegurar que la app sea pública. \\
+11 & Funcionalidades adicionales (opcional) & Si el tiempo lo permite: agregar exportación a PDF, base de datos para almacenar respuestas anónimas, selector de porcentaje de reducción personalizable. \\
+12 & Presentación y cierre & Preparar presentación del proyecto. Realizar un video corto demostrativo. Entregar informe final. \\
+\bottomrule
+\end{tabular}
+\caption{Cronograma de desarrollo (12 semanas)}
+\end{table}
+
+\section{Consideraciones de calidad y buenas prácticas}
+
+\begin{itemize}
+    \item \textbf{Código limpio}: seguir PEP 8, funciones bien documentadas, typing.
+    \item \textbf{Pruebas}: al menos pruebas unitarias para las funciones críticas (ej. \texttt{calcular\_fatiga}, \texttt{estimar\_ppa}).
+    \item \textbf{Manejo de errores}: capturar entradas inválidas y mostrar mensajes amigables.
+    \item \textbf{Accesibilidad}: usar etiquetas claras, contraste suficiente, y probar con lectores de pantalla.
+    \item \textbf{Internacionalización}: aunque inicialmente en español, estructurar el código para permitir cambio de idioma mediante diccionarios.
+    \item \textbf{Seguridad}: no almacenar datos personales sin consentimiento; si se implementa base de datos, anonimizar.
+\end{itemize}
+
+\section{Posibles ampliaciones futuras}
+
+\begin{itemize}
+    \item \textbf{API REST}: separar la lógica de negocio en una API con FastAPI, permitiendo que otros servicios (chatbots, aplicaciones móviles) consuman los mismos cálculos.
+    \item \textbf{Modelos de machine learning}: cuando se disponga de suficientes datos, entrenar un modelo predictivo más complejo y comparar con el modelo paramétrico.
+    \item \textbf{Recomendaciones personalizadas}: sugerir recursos de apoyo (becas, grupos de cuidado compartido, etc.) según el perfil.
+    \item \textbf{Dashboard de investigación}: visualizar estadísticas agregadas de los usuarios (con su consentimiento) para alimentar informes académicos.
+\end{itemize}
+
+\section{Conclusión}
+
+El proyecto \textbf{Shadow-Score Académico} es una iniciativa con alto potencial de impacto social y académico. La elección de Streamlit como plataforma de desarrollo permite construir una herramienta robusta, interactiva y fácil de mantener en un plazo razonable, incluso con recursos limitados. El plan aquí propuesto garantiza un avance estructurado, con entregables claros y la flexibilidad para incorporar mejoras progresivas.
+
+La combinación de un modelo matemático sólido, una interfaz amigable y la capacidad de simular escenarios de corresponsabilidad ofrece una experiencia reveladora para los usuarios, contribuyendo a la concienciación sobre la desigualdad de género en el ámbito universitario y proporcionando evidencia para la formulación de políticas institucionales.
+
+\end{document}
