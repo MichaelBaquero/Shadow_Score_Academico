@@ -18,7 +18,7 @@
     urlcolor=blue,
 }
 
-\title{Informe de Producción\\Shadow-Score Académico (v2)}
+\title{Informe de Producción\\Shadow-Score Académico (v3)}
 \author{Equipo de desarrollo}
 \date{26 de marzo de 2026}
 
@@ -27,19 +27,19 @@
 \maketitle
 
 \begin{abstract}
-El proyecto Shadow-Score Académico consiste en una aplicación web interactiva que permite a estudiantes universitarios reflexionar sobre la distribución de su tiempo entre cargas domésticas, laborales y académicas, y visualizar posibles afectaciones en su rendimiento académico desde una perspectiva de género. Esta versión 2 incorpora un modelo matemático multifactorial basado en la retroalimentación de docentes de investigación. La solución se construye con Streamlit y se describe en detalle: arquitectura, modelo ajustado, interfaz, componentes y cronograma.
+El proyecto Shadow-Score Académico consiste en una aplicación web interactiva que permite a estudiantes universitarios reflexionar sobre la distribución de su tiempo entre cargas domésticas, laborales y académicas, y visualizar posibles afectaciones en su rendimiento académico desde una perspectiva de género. Esta versión 3 incorpora un asistente de inteligencia artificial que genera planes de acción personalizados basados en el coste de oportunidad calculado. La solución se construye con Streamlit y se describe en detalle: arquitectura, modelo ajustado, integración de IA, interfaz, componentes y cronograma.
 \end{abstract}
 
 \section{Introducción}
 
-El proyecto Shadow-Score Académico consiste en una \textbf{aplicación web interactiva} que permite a estudiantes universitarios reflexionar sobre la distribución de su tiempo entre cargas domésticas, laborales y académicas, y visualizar posibles afectaciones en su rendimiento académico desde una perspectiva de género. La herramienta se construye con base en los fundamentos investigativos desarrollados previamente y responde a la retroalimentación recibida, ampliando su enfoque hacia la \textbf{autorreflexión} y considerando la \textbf{multifactorialidad} del fenómeno.
+El proyecto Shadow-Score Académico consiste en una \textbf{aplicación web interactiva} que permite a estudiantes universitarios reflexionar sobre la distribución de su tiempo entre cargas domésticas, laborales y académicas, y visualizar posibles afectaciones en su rendimiento académico desde una perspectiva de género. La herramienta se construye con base en fundamentos investigativos previos y responde a la retroalimentación recibida, ampliando su enfoque hacia la autorreflexión y la acción, mediante la incorporación de un asistente de inteligencia artificial que genera recomendaciones personalizadas.
 
-El presente informe de producción describe la solución técnica a programar: su arquitectura, modelo matemático ajustado, interfaz de usuario, componentes, tecnologías y cronograma de desarrollo. El resultado final será una aplicación desplegada en Streamlit Cloud, accesible públicamente.
+El presente informe describe la solución técnica a programar: su arquitectura, modelo matemático ajustado, interfaz de usuario, componentes, tecnologías y cronograma de desarrollo. El resultado final será una aplicación desplegada en Streamlit Cloud, accesible públicamente.
 
 \section{Objetivos de producción}
 
 \subsection{Objetivo general}
-Desarrollar una aplicación web interactiva que integre un modelo multifactorial de cálculo de fatiga y potencial afectación académica, basado en variables de carga doméstica, laboral, académica y contextuales, con un enfoque de autorreflexión y sensibilización sobre las brechas de género.
+Desarrollar una aplicación web interactiva que integre un modelo multifactorial de cálculo de fatiga y potencial afectación académica, basado en variables de carga doméstica, laboral, académica y contextuales, con un enfoque de autorreflexión y sensibilización sobre las brechas de género, y que ofrezca planes de acción personalizados mediante IA.
 
 \subsection{Objetivos específicos de producción}
 \begin{enumerate}
@@ -47,6 +47,7 @@ Desarrollar una aplicación web interactiva que integre un modelo multifactorial
     \item Diseñar una interfaz de usuario intuitiva que recoja las variables definidas en la investigación y presente resultados mediante gráficos interactivos, métricas y elementos reflexivos.
     \item Simular escenarios de corresponsabilidad y apoyos institucionales (reducción de carga doméstica, acceso a servicios de cuidado) que permitan comparar situaciones actuales y mejoradas.
     \item Incluir información contextual (datos DANE, referencias a ODS) y recomendaciones de apoyo institucional, fomentando la reflexión y la toma de conciencia.
+    \item \textbf{Integrar un asistente basado en IA (vía API externa) que, utilizando el coste de oportunidad calculado, genere planes de acción personalizados para el usuario.}
     \item Garantizar la escalabilidad, mantenibilidad y accesibilidad de la aplicación, utilizando buenas prácticas de desarrollo.
 \end{enumerate}
 
@@ -55,11 +56,12 @@ Desarrollar una aplicación web interactiva que integre un modelo multifactorial
 La aplicación se construirá en \textbf{Python} utilizando \textbf{Streamlit} como framework de frontend.
 
 \subsection{Diagrama de componentes}
-\begin{verbatim}
-[Usuario] → (Streamlit UI) → (Validación de datos) → (Modelo matemático)
-                                                           ↓
-[Visualización y reflexión] ← (Resultados) ← (Simulación de escenarios)
-\end{verbatim}
+\begin{itemize}[leftmargin=*]
+    \item Usuario → Streamlit UI → Validación de datos → Modelo matemático → Cálculo de coste de oportunidad
+    \item Resultados → Visualización y reflexión
+    \item Simulación de escenarios → Resultados comparativos
+    \item Botón ``Generar plan IA'' → API Externa → Sugerencias personalizadas
+\end{itemize}
 
 \subsection{Tecnologías y librerías}
 \begin{table}[H]
@@ -74,6 +76,8 @@ Pandas & Manejo de datos (almacenamiento temporal) \\
 NumPy & Operaciones matemáticas y vectorización \\
 Plotly & Gráficos interactivos (barras, radar, medidores) \\
 Streamlit-extras & Componentes adicionales (gauge, métricas) \\
+\textbf{OpenAI / Google Gemini API} & \textbf{Generación de planes de acción personalizados vía IA} \\
+\textbf{Requests / httpx} & \textbf{Cliente HTTP para consumir la API externa} \\
 Git / GitHub & Control de versiones \\
 Streamlit Cloud & Despliegue continuo \\
 \bottomrule
@@ -90,6 +94,7 @@ shadow-score/
 |   +-- modelo.py
 |   +-- utils.py
 |   +-- graficos.py
+|   +-- ia_prompts.py
 +-- assets/
 |   +-- logo.png
 |   +-- estilo.css
@@ -106,9 +111,9 @@ El modelo se ha ampliado para reflejar la multifactorialidad. Se basa en paráme
 \subsection{Variables de entrada}
 \begin{table}[H]
 \centering
-\footnotesize
-\setlength{\tabcolsep}{3pt}
-\begin{tabular}{>{\raggedright\arraybackslash}p{0.15\textwidth} >{\raggedright\arraybackslash}p{0.15\textwidth} >{\raggedright\arraybackslash}p{0.30\textwidth} >{\raggedright\arraybackslash}p{0.28\textwidth}}
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{p{0.18\textwidth}p{0.16\textwidth}p{0.35\textwidth}p{0.24\textwidth}}
 \toprule
 \textbf{Variable} & \textbf{Tipo} & \textbf{Rango / Opciones} & \textbf{Notas} \\
 \midrule
@@ -129,7 +134,7 @@ Promedio actual (opcional) & Numérico & 0–5.0 & Para comparación \\
 \text{carga\_total} = \text{horas\_domésticas} + \text{horas\_trabajo}
 \]
 \[
-\text{fatiga} = \sigma\left(\frac{\text{carga\_total} - \mu}{\kappa}\right) \cdot \alpha_{\text{género}} \cdot \beta_{\text{estrato}} \cdot \gamma_{\text{hogar}}
+\text{fatiga} = \min\left(1,\; \sigma\left(\frac{\text{carga\_total} - \mu}{\kappa}\right) \cdot \alpha_{\text{género}} \cdot \beta_{\text{estrato}} \cdot \gamma_{\text{hogar}} \right)
 \]
 donde \(\sigma(x)=\frac{1}{1+e^{-x}}\), y los parámetros \(\mu, \kappa, \alpha, \beta, \gamma\) están precalibrados con fuentes secundarias.
 
@@ -140,7 +145,11 @@ donde \(\sigma(x)=\frac{1}{1+e^{-x}}\), y los parámetros \(\mu, \kappa, \alpha,
 
 \subsection{Estimación del promedio (PPA)}
 \[
-\text{PPA\_estimado} = \beta_0 + \beta_1 \cdot \text{horas\_efectivas} + \beta_2 \cdot \text{estrato} + \beta_3 \cdot \text{género} + \beta_4 \cdot \text{dependientes} + \beta_5 \cdot (\text{género} \times \text{fatiga})
+\begin{aligned}
+\text{PPA\_estimado} = &\; \beta_0 + \beta_1 \cdot \text{horas\_efectivas} + \beta_2 \cdot \text{estrato} \\
+&+ \beta_3 \cdot \text{género} + \beta_4 \cdot \text{dependientes} \\
+&+ \beta_5 \cdot (\text{género} \times \text{fatiga})
+\end{aligned}
 \]
 
 \subsection{Shadow-Score}
@@ -149,16 +158,65 @@ donde \(\sigma(x)=\frac{1}{1+e^{-x}}\), y los parámetros \(\mu, \kappa, \alpha,
 \]
 Interpretación: 0–20 (baja penalización), 21–40 (moderada), 41–60 (significativa), 61–80 (alta), 81–100 (extrema).
 
+\subsection{Coste de oportunidad}
+\[
+\text{coste\_horas} = \text{horas\_estudio} - \text{horas\_efectivas}
+\]
+\[
+\text{coste\_ppa} = \text{PPA\_actual} - \text{PPA\_estimado} \quad (\text{si se ingresó PPA actual})
+\]
+
 \subsection{Escenario de corresponsabilidad}
 Se simula una reducción en la carga doméstica (por defecto 40\%, ajustable) y opcionalmente un apoyo institucional que reduce la fatiga. Se comparan indicadores lado a lado.
+
+\section{Asistente IA: Planes de acción personalizados}
+
+Con el objetivo de convertir la reflexión en acción, la aplicación incorpora un módulo de inteligencia artificial que, basado en los datos del usuario y el coste de oportunidad, genera recomendaciones concretas.
+
+\subsection{Lógica del asistente}
+Se utiliza una API externa (OpenAI GPT-4o mini o Google Gemini Flash) mediante prompting estructurado. El prompt incluye:
+\begin{itemize}
+    \item Perfil del usuario (género, estrato, composición del hogar, dependientes).
+    \item Carga detectada (horas domésticas, laborales, fatiga cognitiva).
+    \item Coste de oportunidad (diferencia de horas y pérdida de promedio).
+    \item Contexto del escenario (Shadow-Score y métricas actuales).
+\end{itemize}
+
+\subsection{Funcionalidad}
+\begin{enumerate}
+    \item Botón ``Generar plan de acción con IA'' junto a los resultados.
+    \item Llamada a la API con clave gestionada mediante variables de entorno.
+    \item Visualización de sugerencias formateadas (estrategias de redistribución, apoyos institucionales, gestión del tiempo, recursos externos).
+    \item Incluye disclaimer informativo.
+\end{enumerate}
+
+\subsection{Integración técnica}
+\begin{table}[H]
+\centering
+\begin{tabular}{ll}
+\toprule
+\textbf{Componente} & \textbf{Detalle} \\
+\midrule
+API Externa & OpenAI API o Google Gemini API (modelo pequeño por costo) \\
+Manejo de clave & \texttt{.streamlit/secrets.toml} y variables de entorno \\
+Prompt engineering & Archivo \texttt{ia\_prompts.py} con placeholders \\
+Llamada asíncrona & \texttt{st.spinner} mientras se espera respuesta \\
+Caché opcional & Evita llamadas repetidas con el mismo perfil \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Impacto}
+Convierte la herramienta de diagnóstico a un agente de cambio activo, promueve la corresponsabilidad y puede desactivarse fácilmente si no hay presupuesto.
 
 \section{Flujo de usuario y funcionalidades}
 
 \begin{enumerate}
     \item \textbf{Página de inicio}: presentación, ODS 5, datos DANE.
     \item \textbf{Formulario de entrada}: datos sociodemográficos, carga de trabajo, académicos y percepción.
-    \item \textbf{Cálculo y visualización}: Shadow-Score, fatiga (gauge), horas efectivas, promedio estimado, gráfico de radar.
+    \item \textbf{Cálculo y visualización}: Shadow-Score, fatiga (gauge), horas efectivas, promedio estimado, gráfico de radar, coste de oportunidad.
     \item \textbf{Simulación}: escenario actual vs. mejorado.
+    \item \textbf{Asistente IA}: botón para generar plan de acción personalizado.
     \item \textbf{Información adicional}: metodología, fuentes, recursos institucionales.
 \end{enumerate}
 
@@ -175,11 +233,12 @@ Se simula una reducción en la carga doméstica (por defecto 40\%, ajustable) y 
 2 & Interfaz básica & Formulario simple, validaciones, integración del modelo. \\
 3 & Visualizaciones & Gráficos Plotly (medidor, radar, barras). \\
 4 & Simulación & Lógica de reducción de carga y apoyo institucional, vista comparativa. \\
-5 & Elementos reflexivos & Expanders con datos DANE, referencias, recomendaciones. \\
-6 & Pruebas de usuario & Feedback, correcciones. \\
-7 & Optimización & Caché, tiempos de respuesta. \\
-8 & Despliegue & Streamlit Cloud, pruebas multi-dispositivo. \\
-9 & Documentación & README, video demostrativo. \\
+5 & \textbf{Integración de IA} & Configurar API key, prompt estructurado, llamada a la API, mostrar sugerencias. Manejo de errores. \\
+6 & Elementos reflexivos & Expanders con datos DANE, referencias, recomendaciones. \\
+7 & Pruebas de usuario & Feedback, correcciones. \\
+8 & Optimización & Caché, tiempos de respuesta. \\
+9 & Despliegue & Streamlit Cloud, pruebas multi-dispositivo. \\
+10 & Documentación & README, video demostrativo. \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -188,7 +247,7 @@ Se simula una reducción en la carga doméstica (por defecto 40\%, ajustable) y 
 \begin{itemize}
     \item Código limpio (PEP 8, docstrings, typing).
     \item Pruebas unitarias para funciones críticas.
-    \item Manejo de errores y validaciones.
+    \item Manejo de errores y validaciones; en la llamada a la API, capturar fallos.
     \item Accesibilidad y contraste.
     \item Privacidad: no almacenar datos personales sin consentimiento.
 \end{itemize}
@@ -197,11 +256,11 @@ Se simula una reducción en la carga doméstica (por defecto 40\%, ajustable) y 
 \begin{itemize}
     \item API REST con FastAPI.
     \item Almacenamiento anónimo de datos para recalibrar el modelo.
-    \item Recomendaciones personalizadas.
+    \item Recomendaciones personalizadas avanzadas con bases de datos locales.
     \item Dashboard institucional.
 \end{itemize}
 
 \section{Conclusión}
-La versión 2 de Shadow-Score Académico presenta un modelo multifactorial robusto, basado en evidencia y retroalimentación, que permite una reflexión más realista sobre la carga doméstica y el rendimiento académico. La implementación con Streamlit garantiza una herramienta accesible, interactiva y de fácil despliegue.
+La versión 3 de Shadow-Score Académico añade un asistente de IA que genera planes de acción personalizados basados en el coste de oportunidad, transformando la reflexión en pasos concretos. El modelo multifactorial precalibrado y la arquitectura en Streamlit garantizan una herramienta robusta, escalable y alineada con los objetivos de sensibilización y acción.
 
 \end{document}
