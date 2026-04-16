@@ -1,3 +1,6 @@
+# Archivos auxilares de drawio
+*.drawio
+
 # Archivos auxiliares de LaTeX en Documentacion
 Documentacion/*.aux
 Documentacion/*.fdb_latexmk
