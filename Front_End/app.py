@@ -1,212 +1,144 @@
-"""
-Shadow-Score Académico - Frontend Principal
-Versión: 1.1.1 - Corrección en mensaje de PPA y mejoras visuales.
-"""
-
+import os
 import streamlit as st
-import sys
-from pathlib import Path
+from config.estilos_comunes import aplicar_estilos_globales
+from config.frases import FRASES
+from config.tarjetas import TARJETA_ESTUDIANTE, TARJETA_ADMIN
+from config.colores import COLOR_FONDO_CARRUSEL
+import json
 
-# =========================================================
-# CONFIGURACIÓN DE RUTAS PARA IMPORTACIÓN DEL BACKEND
-# =========================================================
-current_file = Path(__file__).resolve()
-frontend_dir = current_file.parent
-project_root = frontend_dir.parent
-
-if str(project_root) not in sys.path:
-    sys.path.insert(0, str(project_root))
-
-try:
-    from Back_end.modelo import ejecutar_modelo
-except ImportError as e:
-    st.error(f"Error crítico: No se pudo cargar el módulo del modelo matemático.\n\nDetalles: {e}")
-    st.info(f"Ruta del proyecto: {project_root}")
-    back_end_path = project_root / 'Back_end'
-    if back_end_path.exists():
-        contenido = list(back_end_path.glob('*'))
-        st.info(f"Contenido de Back_end/: {[f.name for f in contenido]}")
-    else:
-        st.error(f"La carpeta Back_end no existe en {project_root}")
-    st.stop()
-
-# =========================================================
-# CONFIGURACIÓN DE PÁGINA
-# =========================================================
 st.set_page_config(
     page_title="Shadow-Score Académico",
     page_icon="📊",
-    layout="wide",
-    initial_sidebar_state="expanded"
+    layout="centered",
+    initial_sidebar_state="collapsed"
 )
 
-# Estilo mínimo en escala de grises
-st.markdown("""
-<style>
-    .stApp {
-        background-color: #fafafa;
-    }
-    .main .block-container {
-        padding-top: 2rem;
-    }
-    h1, h2, h3 {
-        color: #2c3e50;
-    }
-    .stButton > button {
-        background-color: #4a4a4a;
-        color: white;
-        border-radius: 8px;
-        border: none;
-        padding: 0.5rem 1rem;
-        font-weight: 500;
-    }
-    .stButton > button:hover {
-        background-color: #2c2c2c;
-    }
-    .stError {
-        background-color: #fee;
-    }
-</style>
-""", unsafe_allow_html=True)
+aplicar_estilos_globales()
 
-# =========================================================
-# FUNCIONES AUXILIARES
-# =========================================================
-def validar_campos_obligatorios(perfil, cargas):
-    errores = []
-    if not perfil.get('genero'):
-        errores.append("Género es obligatorio.")
-    if perfil.get('estrato') is None:
-        errores.append("Estrato es obligatorio.")
-    if not perfil.get('composicion_hogar'):
-        errores.append("Composición del hogar es obligatoria.")
-    if cargas.get('horas_domesticas') is None or cargas['horas_domesticas'] < 0:
-        errores.append("Horas domésticas debe ser un número ≥ 0.")
-    if cargas.get('horas_trabajo') is None or cargas['horas_trabajo'] < 0:
-        errores.append("Horas de trabajo deben ser un número ≥ 0.")
-    if cargas.get('horas_estudio') is None or cargas['horas_estudio'] < 0:
-        errores.append("Horas de estudio deben ser un número ≥ 0.")
-    total_horas = (cargas.get('horas_domesticas', 0) + 
-                   cargas.get('horas_trabajo', 0) + 
-                   cargas.get('horas_estudio', 0))
-    if total_horas > 168:
-        errores.append(f"La suma de horas ({total_horas}) excede 168 (total semanal).")
-    return len(errores) == 0, errores
+st.title("📊 Shadow-Score Académico")
+st.markdown(
+    """
+    <p style="font-size:1.2rem; color:#2c3e50; text-align:center; margin-bottom:2rem;">
+    Calcula el impacto de la carga doméstica y laboral en tu rendimiento académico.<br>
+    Reflexiona, simula escenarios de corresponsabilidad y recibe planes de acción personalizados.
+    </p>
+    """,
+    unsafe_allow_html=True
+)
 
-def mostrar_metrica_con_flecha(label, value, delta_value, unidad, es_bueno_si_positivo=True):
-    if delta_value > 0:
-        flecha = "↑"
-        color = "green" if es_bueno_si_positivo else "red"
-        texto = f"{flecha} {delta_value:.1f} {unidad}"
-    elif delta_value < 0:
-        flecha = "↓"
-        color = "red" if es_bueno_si_positivo else "green"
-        texto = f"{flecha} {abs(delta_value):.1f} {unidad}"
-    else:
-        texto = "Sin cambio"
-        color = "gray"
-    st.metric(label, value)
-    st.markdown(f"<span style='color:{color}; font-weight:bold;'>{texto}</span>", 
-                unsafe_allow_html=True)
+# Función para generar una tarjeta clickeable
+def render_tarjeta(archivo_pagina, emoji, titulo, subtitulo, color_fondo=None):
+    # Construir la URL de Streamlit a partir del archivo en pages/
+    # Ejemplo: "pages/1. estudiante.py" -> "/1_estudiante"
+    nombre_base = archivo_pagina.replace("pages/", "").replace(".py", "")
+    # Reemplazar espacios por guiones bajos (Streamlit lo hace así)
+    url = "/" + nombre_base.replace(" ", "_")
+    # Además, si el nombre comienza con número y punto, lo deja tal cual (ej: "1_estudiante")
+    
+    bg_color = color_fondo if color_fondo else "#ffffff"
+    
+    html = f"""
+    <a href="{url}" style="text-decoration: none; display: block;">
+        <div style="
+            background-color: {bg_color};
+            border-radius: 32px;
+            padding: 2rem 1rem;
+            min-height: 400px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            cursor: pointer;
+            box-shadow: 0 20px 30px -12px rgba(0, 0, 0, 0.15);
+            transition: transform 0.2s, box-shadow 0.2s;
+            border: 1px solid #e2e8f0;
+            margin-bottom: 1rem;
+        "
+        onmouseover="this.style.transform='translateY(-6px)'; this.style.boxShadow='0 25px 35px -12px rgba(0,0,0,0.2)';"
+        onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 20px 30px -12px rgba(0,0,0,0.15)';">
+            <div style="font-size: 5rem; margin-bottom: 1rem;">{emoji}</div>
+            <div style="font-size: 2rem; font-weight: 700; margin-bottom: 0.75rem; color: #1e293b;">{titulo}</div>
+            <div style="font-size: 1rem; color: #475569; max-width: 80%;">{subtitulo}</div>
+        </div>
+    </a>
+    """
+    return html
 
-def generar_plan_accion_ia(perfil, cargas, resultados):
-    raise NotImplementedError("La integración con IA aún no está implementada.")
+col1, col2 = st.columns(2, gap="large")
 
-# =========================================================
-# INTERFAZ PRINCIPAL
-# =========================================================
-def main():
-    st.title("📊 Shadow-Score Académico")
-    st.markdown("""
-    **Reflexiona sobre la distribución de tu tiempo desde una perspectiva de género.**  
-    Esta herramienta te ayuda a visualizar cómo las responsabilidades domésticas y laborales 
-    pueden afectar tu rendimiento académico, y te ofrece un plan de acción personalizado.
-    """)
-    st.divider()
+with col1:
+    st.markdown(
+        render_tarjeta(
+            TARJETA_ESTUDIANTE["ruta"],
+            TARJETA_ESTUDIANTE["emoji"],
+            TARJETA_ESTUDIANTE["titulo"],
+            TARJETA_ESTUDIANTE["subtitulo"],
+            TARJETA_ESTUDIANTE.get("color_fondo")
+        ),
+        unsafe_allow_html=True
+    )
 
-    with st.sidebar:
-        st.header("📝 Tus Datos")
-        st.subheader("👤 Perfil")
-        col1, col2 = st.columns(2)
-        with col1:
-            genero = st.selectbox("Género *", ["Femenino", "Masculino"], index=None, placeholder="Selecciona una opción")
-            estrato = st.selectbox("Estrato socioeconómico *", list(range(1,7)), index=None, placeholder="Elige tu estrato")
-        with col2:
-            composicion_hogar = st.selectbox("Composición del hogar *", 
-                                            ["Vive solo/a", "Con familia", "Con pareja", "Residencia universitaria", "Otros"],
-                                            index=None, placeholder="Selecciona...")
-            dependientes = st.number_input("Personas a cargo", 0, 10, 0, 1)
-        st.divider()
-        st.subheader("⏱️ Carga Semanal *")
-        horas_domesticas = st.number_input("Horas en tareas domésticas y de cuidado", 0.0, 168.0, 0.0, 1.0)
-        horas_trabajo = st.number_input("Horas de trabajo remunerado", 0.0, 168.0, 0.0, 1.0)
-        horas_estudio = st.number_input("Horas de estudio declaradas", 0.0, 168.0, 0.0, 1.0)
-        st.divider()
-        st.subheader("📚 Dato Académico Opcional")
-        promedio_actual = st.number_input("Promedio ponderado actual (0.0 - 5.0)", 0.0, 5.0, None, 0.1)
-        calcular_clicked = st.button("🔍 Calcular mi Shadow-Score", type="primary", use_container_width=True)
+with col2:
+    st.markdown(
+        render_tarjeta(
+            TARJETA_ADMIN["ruta"],
+            TARJETA_ADMIN["emoji"],
+            TARJETA_ADMIN["titulo"],
+            TARJETA_ADMIN["subtitulo"],
+            TARJETA_ADMIN.get("color_fondo")
+        ),
+        unsafe_allow_html=True
+    )
 
-    if calcular_clicked:
-        perfil = {'genero': genero, 'estrato': estrato, 'composicion_hogar': composicion_hogar, 'dependientes': dependientes}
-        cargas = {'horas_domesticas': horas_domesticas, 'horas_trabajo': horas_trabajo, 'horas_estudio': horas_estudio}
-        es_valido, errores = validar_campos_obligatorios(perfil, cargas)
-        if not es_valido:
-            for error in errores:
-                st.error(f"❌ {error}")
-        else:
-            try:
-                resultados = ejecutar_modelo(perfil, cargas, promedio_actual)
-                st.session_state['perfil'] = perfil
-                st.session_state['cargas'] = cargas
-                st.session_state['resultados'] = resultados
-                st.success("✅ Cálculo completado. Revisa tus indicadores abajo.")
-                
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    mostrar_metrica_con_flecha("Shadow-Score", f"{resultados['shadow_score']:.0f} / 100",
-                                               -resultados['shadow_score'], "puntos", es_bueno_si_positivo=True)
-                with col2:
-                    st.metric("Fatiga Cognitiva", f"{resultados['fatiga']:.1%}")
-                with col3:
-                    coste = resultados['coste_horas']
-                    mostrar_metrica_con_flecha("Horas Efectivas de Estudio", f"{resultados['horas_efectivas']:.1f} h",
-                                               -coste, "h", es_bueno_si_positivo=True)
-                
-                with st.expander("📈 Ver más detalles"):
-                    st.write(f"**Carga total semanal (doméstica + laboral):** {resultados['carga_total']:.1f} horas")
-                    st.write(f"**Promedio estimado según condiciones:** {resultados['ppa_estimado']:.2f}")
-                    if resultados['coste_ppa'] is not None:
-                        afectacion = resultados['coste_ppa']
-                        if afectacion > 0:
-                            st.markdown(f"**✅ Tu promedio está <span style='color:green;'>↑ {afectacion:.2f} puntos por encima</span> del esperado. ¡Excelente!**", unsafe_allow_html=True)
-                        elif afectacion < 0:
-                            st.markdown(f"**⚠️ Posible afectación en tu promedio: <span style='color:red;'>↓ {abs(afectacion):.2f} puntos por debajo</span> del esperado.**", unsafe_allow_html=True)
-                        else:
-                            st.write("**Tu promedio coincide exactamente con el estimado.**")
-                    else:
-                        st.write("**Promedio actual no ingresado.** No se calcula diferencia.")
-                
-                st.markdown("---")
-                st.subheader("🤔 Momento de reflexión")
-                st.markdown("> *¿Qué cambiaría si pudieras redistribuir tus tareas domésticas?*")
-                st.markdown("> *¿Conoces los apoyos que ofrece tu universidad (guardería, becas, tutorías)?*")
-            except Exception as e:
-                st.error(f"Ocurrió un error inesperado: {e}")
+st.markdown("---")
 
-    if 'resultados' in st.session_state:
-        st.divider()
-        st.subheader("🤖 Plan de Acción Personalizado con IA")
-        if st.button("✨ Generar plan de acción", type="secondary"):
-            with st.spinner("Consultando a Gemini..."):
-                try:
-                    plan = generar_plan_accion_ia(st.session_state['perfil'], st.session_state['cargas'], st.session_state['resultados'])
-                    st.markdown(plan)
-                except NotImplementedError:
-                    st.warning("🚧 La integración con IA estará disponible próximamente.")
-                except Exception as e:
-                    st.error(f"No se pudo generar el plan: {e}")
-    else:
-        st.info("👆 Completa el formulario y calcula tu Shadow-Score para recibir un plan personalizado.")
+# --- Carrusel de frases (con HTML y JS, usando FRASES con <strong>) ---
+# Construir el array de frases en formato JSON para JavaScript
+import json
+frases_json = json.dumps(FRASES)
 
-if __name__ == "__main__":
-    main()
+carousel_html = f"""
+<div id="frase-carousel" style="
+    background: {COLOR_FONDO_CARRUSEL};
+    border-radius: 28px;
+    padding: 2rem 1.5rem;
+    text-align: center;
+    font-size: 1.15rem;
+    font-weight: 500;
+    color: #1e293b;
+    border-left: 6px solid #3b82f6;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    margin-top: 1rem;
+">
+    <div style="font-size: 1rem; color: #3b82f6; margin-bottom: 0.75rem;">✨ Reflexión del momento ✨</div>
+    <div id="frase-texto" style="line-height: 1.5;">{FRASES[0]}</div>
+</div>
+
+<script>
+    const frases = {frases_json};
+    let index = 0;
+    const intervalo = 10000; // 10 segundos
+
+    function cambiarFrase() {{
+        index = (index + 1) % frases.length;
+        document.getElementById("frase-texto").innerHTML = frases[index];
+    }}
+    setInterval(cambiarFrase, intervalo);
+</script>
+"""
+
+st.components.v1.html(carousel_html, height=180)
+st.caption("🔄 Las frases cambian automáticamente cada 10 segundos.")
+
+# --- Footer ---
+st.markdown("---")
+st.markdown(
+    """
+    <div style="text-align: center; color: #6c757d; font-size: 0.8rem;">
+    Basado en datos del DANE, ENUT, ODS 5 y estudios colombianos sobre fatiga académica y corresponsabilidad.<br>
+    Shadow-Score Académico v3.0 - Transformando la reflexión en acción.
+    </div>
+    """,
+    unsafe_allow_html=True
+)
