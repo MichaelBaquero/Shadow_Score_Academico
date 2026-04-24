@@ -27,18 +27,17 @@ st.markdown(
 )
 
 # Función para generar una tarjeta clickeable
-def render_tarjeta(archivo_pagina, emoji, titulo, subtitulo, color_fondo=None):
+def render_tarjeta(archivo_pagina, emoji, titulo, subtitulo, color_fondo=None, nombre_pagina=None):
     # Construir la URL de Streamlit a partir del archivo en pages/
     # Ejemplo: "pages/1. estudiante.py" -> "/1_estudiante"
     nombre_base = archivo_pagina.replace("pages/", "").replace(".py", "")
     # Reemplazar espacios por guiones bajos (Streamlit lo hace así)
-    url = "/" + nombre_base.replace(" ", "_")
     # Además, si el nombre comienza con número y punto, lo deja tal cual (ej: "1_estudiante")
     
     bg_color = color_fondo if color_fondo else "#ffffff"
     
     html = f"""
-    <a href="{url}" style="text-decoration: none; display: block;">
+    <a style="text-decoration: none; display: block;" href="{nombre_pagina if nombre_pagina else '#'}">
         <div style="
             background-color: {bg_color};
             border-radius: 32px;
@@ -74,7 +73,8 @@ with col1:
             TARJETA_ESTUDIANTE["emoji"],
             TARJETA_ESTUDIANTE["titulo"],
             TARJETA_ESTUDIANTE["subtitulo"],
-            TARJETA_ESTUDIANTE.get("color_fondo")
+            TARJETA_ESTUDIANTE.get("color_fondo"),
+            'estudiante'
         ),
         unsafe_allow_html=True
     )
@@ -86,7 +86,8 @@ with col2:
             TARJETA_ADMIN["emoji"],
             TARJETA_ADMIN["titulo"],
             TARJETA_ADMIN["subtitulo"],
-            TARJETA_ADMIN.get("color_fondo")
+            TARJETA_ADMIN.get("color_fondo"),
+            'administrativo'
         ),
         unsafe_allow_html=True
     )
