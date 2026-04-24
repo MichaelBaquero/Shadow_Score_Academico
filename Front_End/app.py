@@ -1,11 +1,19 @@
+"""
+Shadow-Score Académico - Página de Inicio (Home)
+Versión con tarjetas personalizadas, redirección funcional y carrusel con indicadores.
+"""
+
 import os
 import streamlit as st
+import json
 from config.estilos_comunes import aplicar_estilos_globales
 from config.frases import FRASES
 from config.tarjetas import TARJETA_ESTUDIANTE, TARJETA_ADMIN
 from config.colores import COLOR_FONDO_CARRUSEL
-import json
 
+# =========================================================
+# CONFIGURACIÓN DE LA PÁGINA
+# =========================================================
 st.set_page_config(
     page_title="Shadow-Score Académico",
     page_icon="📊",
@@ -13,8 +21,12 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
+# Aplicar estilos globales (sidebar oculta, tarjetas, etc.)
 aplicar_estilos_globales()
 
+# =========================================================
+# ENCABEZADO PRINCIPAL
+# =========================================================
 st.title("📊 Shadow-Score Académico")
 st.markdown(
     """
@@ -26,18 +38,19 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# Función para generar una tarjeta clickeable
+# =========================================================
+# FUNCIÓN PARA GENERAR TARJETAS CLICKEABLES
+# =========================================================
 def render_tarjeta(archivo_pagina, emoji, titulo, subtitulo, color_fondo=None, nombre_pagina=None):
-    # Construir la URL de Streamlit a partir del archivo en pages/
-    # Ejemplo: "pages/1. estudiante.py" -> "/1_estudiante"
-    nombre_base = archivo_pagina.replace("pages/", "").replace(".py", "")
-    # Reemplazar espacios por guiones bajos (Streamlit lo hace así)
-    # Además, si el nombre comienza con número y punto, lo deja tal cual (ej: "1_estudiante")
-    
+    """
+    Genera el HTML de una tarjeta interactiva con efecto hover.
+    La redirección se realiza a través del atributo 'href' que se le pasa.
+    """
     bg_color = color_fondo if color_fondo else "#ffffff"
+    target_url = nombre_pagina if nombre_pagina else "#"
     
     html = f"""
-    <a style="text-decoration: none; display: block;" href="{nombre_pagina if nombre_pagina else '#'}">
+    <a style="text-decoration: none; display: block;" href="{target_url}">
         <div style="
             background-color: {bg_color};
             border-radius: 32px;
@@ -64,6 +77,9 @@ def render_tarjeta(archivo_pagina, emoji, titulo, subtitulo, color_fondo=None, n
     """
     return html
 
+# =========================================================
+# TARJETAS DE ROL (ESTUDIANTE / ADMINISTRATIVO)
+# =========================================================
 col1, col2 = st.columns(2, gap="large")
 
 with col1:
@@ -94,45 +110,109 @@ with col2:
 
 st.markdown("---")
 
-# --- Carrusel de frases (con HTML y JS, usando FRASES con <strong>) ---
-# Construir el array de frases en formato JSON para JavaScript
-import json
+# =========================================================
+# CARRUSEL DE FRASES CON INDICADORES
+# =========================================================
+
 frases_json = json.dumps(FRASES)
 
 carousel_html = f"""
-<div id="frase-carousel" style="
-    background: {COLOR_FONDO_CARRUSEL};
-    border-radius: 28px;
-    padding: 2rem 1.5rem;
-    text-align: center;
-    font-size: 1.15rem;
-    font-weight: 500;
-    color: #1e293b;
-    border-left: 6px solid #3b82f6;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-    margin-top: 1rem;
-">
-    <div style="font-size: 1rem; color: #3b82f6; margin-bottom: 0.75rem;">✨ Reflexión del momento ✨</div>
-    <div id="frase-texto" style="line-height: 1.5;">{FRASES[0]}</div>
+<style>
+    .carousel-container {{
+        background: {COLOR_FONDO_CARRUSEL};
+        border-radius: 28px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        margin-top: 1rem;
+        padding: 1.5rem;
+    }}
+    .frase-texto {{
+        text-align: center;
+        font-size: 1.15rem;
+        font-weight: 500;
+        color: #1e293b;
+        line-height: 1.5;
+        min-height: 80px;
+        transition: opacity 0.6s ease-in-out;
+        opacity: 1;
+    }}
+    .frase-texto.fade-out {{
+        opacity: 0;
+    }}
+    .dots-container {{
+        display: flex;
+        justify-content: center;
+        gap: 8px;
+        margin-top: 20px;
+    }}
+    .dot {{
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background-color: #cbd5e1;
+        transition: background-color 0.3s ease;
+    }}
+    .dot.active {{
+        background-color: #3b82f6;
+    }}
+</style>
+
+<div class="carousel-container">
+    <div id="frase-texto" class="frase-texto">{FRASES[0]}</div>
+    <div class="dots-container" id="dots-container"></div>
 </div>
 
 <script>
     const frases = {frases_json};
-    let index = 0;
-    const intervalo = 10000; // 10 segundos
+    let currentIndex = 0;
+    const intervalTime = 10000; // 10 segundos
+    let isTransitioning = false;
 
-    function cambiarFrase() {{
-        index = (index + 1) % frases.length;
-        document.getElementById("frase-texto").innerHTML = frases[index];
+    const fraseDiv = document.getElementById('frase-texto');
+    const dotsContainer = document.getElementById('dots-container');
+
+    // Crear los puntos (sin eventos de clic)
+    frases.forEach((_, idx) => {{
+        const dot = document.createElement('div');
+        dot.classList.add('dot');
+        if (idx === currentIndex) dot.classList.add('active');
+        dotsContainer.appendChild(dot);
+    }});
+
+    function updateActiveDot() {{
+        const dots = document.querySelectorAll('.dot');
+        dots.forEach((dot, idx) => {{
+            if (idx === currentIndex) dot.classList.add('active');
+            else dot.classList.remove('active');
+        }});
     }}
-    setInterval(cambiarFrase, intervalo);
+
+    function setFrase(index) {{
+        if (isTransitioning) return;
+        isTransitioning = true;
+        fraseDiv.classList.add('fade-out');
+        setTimeout(() => {{
+            currentIndex = index;
+            fraseDiv.innerHTML = frases[currentIndex];
+            updateActiveDot();
+            fraseDiv.classList.remove('fade-out');
+            setTimeout(() => {{ isTransitioning = false; }}, 100);
+        }}, 300);
+    }}
+
+    function nextFrase() {{
+        const nextIndex = (currentIndex + 1) % frases.length;
+        setFrase(nextIndex);
+    }}
+
+    setInterval(nextFrase, intervalTime);
 </script>
 """
 
-st.components.v1.html(carousel_html, height=180)
-st.caption("🔄 Las frases cambian automáticamente cada 10 segundos.")
+st.components.v1.html(carousel_html, height=190)
 
-# --- Footer ---
+# =========================================================
+# PIE DE PÁGINA (CRÉDITOS Y FUENTES)
+# =========================================================
 st.markdown("---")
 st.markdown(
     """
