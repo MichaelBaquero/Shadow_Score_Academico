@@ -18,50 +18,54 @@
     urlcolor=blue,
 }
 
-\title{Informe de Producción\\Shadow-Score Académico (v3)}
+\title{Informe de Producción\\Shadow-Score Académico (v4)}
 \author{Equipo de desarrollo}
-\date{26 de marzo de 2026}
+\date{29 de abril de 2026}
 
 \begin{document}
 
 \maketitle
 
 \begin{abstract}
-El proyecto Shadow-Score Académico consiste en una aplicación web interactiva que permite a estudiantes universitarios reflexionar sobre la distribución de su tiempo entre cargas domésticas, laborales y académicas, y visualizar posibles afectaciones en su rendimiento académico desde una perspectiva de género. Esta versión 3 incorpora un asistente de inteligencia artificial que genera planes de acción personalizados basados en el coste de oportunidad calculado. La solución se construye con Streamlit y se describe en detalle: arquitectura, modelo ajustado, integración de IA, interfaz, componentes y cronograma.
+El proyecto Shadow-Score Académico consiste en una aplicación web interactiva que permite a estudiantes universitarios reflexionar sobre la distribución de su tiempo entre cargas domésticas, laborales y académicas, y visualizar posibles afectaciones en su rendimiento académico desde una perspectiva de género. Esta versión 4 incorpora un modelo matemático multifactorial calibrado con la ENUT 2024‑2025 del DANE y un asistente de inteligencia artificial que genera planes de acción personalizados basados en el coste de oportunidad calculado. Adicionalmente, se ha desarrollado un \textbf{módulo administrativo} que permite a la universidad cargar archivos CSV con datos de múltiples estudiantes (un archivo por facultad), procesarlos mediante un flujo ETL implementado con estructuras internas de Python (Pandas) y presentar resultados agregados en dashboards interactivos, sin utilizar IA para preservar la confidencialidad de los datos sensibles. La solución se construye con Streamlit y se describe en detalle: arquitectura, modelo ajustado, integración de IA e interfaz.
 \end{abstract}
 
 \section{Introducción}
 
 El proyecto Shadow-Score Académico consiste en una \textbf{aplicación web interactiva} que permite a estudiantes universitarios reflexionar sobre la distribución de su tiempo entre cargas domésticas, laborales y académicas, y visualizar posibles afectaciones en su rendimiento académico desde una perspectiva de género. La herramienta se construye con base en fundamentos investigativos previos y responde a la retroalimentación recibida, ampliando su enfoque hacia la autorreflexión y la acción, mediante la incorporación de un asistente de inteligencia artificial que genera recomendaciones personalizadas.
 
-El presente informe describe la solución técnica a programar: su arquitectura, modelo matemático ajustado, interfaz de usuario, componentes, tecnologías y cronograma de desarrollo. El resultado final será una aplicación desplegada en Streamlit Cloud, accesible públicamente.
+El presente informe describe la solución técnica desarrollada: su arquitectura, modelo matemático ajustado (v4), interfaz de usuario e integración del asistente de IA. Además, se incorpora un \textbf{módulo administrativo} destinado a directivos y personal de bienestar universitario, que permite el análisis masivo de datos a través de la carga de archivos CSV, procesamiento ETL (Extracción, Transformación y Carga) con estructuras internas de Python, y la generación de dashboards institucionales sin exposición de datos sensibles a servicios externos. El resultado final es una aplicación desplegada en Streamlit Cloud, accesible públicamente, que atiende tanto la necesidad de reflexión individual como la de toma de decisiones institucional.
 
 \section{Objetivos de producción}
 
 \subsection{Objetivo general}
-Desarrollar una aplicación web interactiva que integre un modelo multifactorial de cálculo de fatiga y potencial afectación académica, basado en variables de carga doméstica, laboral, académica y contextuales, con un enfoque de autorreflexión y sensibilización sobre las brechas de género, y que ofrezca planes de acción personalizados mediante IA.
+Desarrollar una aplicación web interactiva que integre un modelo multifactorial de cálculo de fatiga y potencial afectación académica, basado en variables de carga doméstica, laboral, académica y contextuales, con un enfoque de autorreflexión y sensibilización sobre las brechas de género, y que ofrezca planes de acción personalizados mediante IA, además de un módulo administrativo para procesamiento masivo (CSV) y visualización agregada mediante dashboards.
 
-\subsection{Objetivos específicos de producción}
+\subsection{Objetivos específicos}
 \begin{enumerate}
     \item Implementar un modelo matemático que considere carga doméstica, carga laboral, composición del hogar, estrato, género y percepción subjetiva, para generar indicadores de fatiga, tiempo efectivo de estudio y un Shadow-Score cualitativo.
-    \item Diseñar una interfaz de usuario intuitiva que recoja las variables definidas en la investigación y presente resultados mediante gráficos interactivos, métricas y elementos reflexivos.
+    \item Diseñar una interfaz de usuario intuitiva para el rol estudiante que recoja las variables definidas y presente resultados mediante gráficos interactivos, métricas y elementos reflexivos.
     \item Simular escenarios de corresponsabilidad y apoyos institucionales (reducción de carga doméstica, acceso a servicios de cuidado) que permitan comparar situaciones actuales y mejoradas.
-    \item Incluir información contextual (datos DANE, referencias a ODS) y recomendaciones de apoyo institucional, fomentando la reflexión y la toma de conciencia.
-    \item \textbf{Integrar un asistente basado en IA (vía API externa) que, utilizando el coste de oportunidad calculado, genere planes de acción personalizados para el usuario.}
+    \item Incluir información contextual (datos DANE, referencias a ODS) y recomendaciones de apoyo institucional.
+    \item Integrar un asistente basado en IA (vía API externa) que, utilizando el coste de oportunidad calculado, genere planes de acción personalizados para el usuario.
+    \item Diseñar un módulo administrativo que permita cargar archivos CSV con identificadores anónimos de estudiantes, procesarlos mediante un flujo ETL implementado con estructuras internas de Python (Pandas) y aplicar el mismo modelo matemático a cada registro.
+    \item Implementar dashboards de presentación de resultados agregados para el rol administrativo, que muestren métricas institucionales (distribución de Shadow-Score, brechas de género, etc.) sin utilizar IA debido a la sensibilidad de los datos.
     \item Garantizar la escalabilidad, mantenibilidad y accesibilidad de la aplicación, utilizando buenas prácticas de desarrollo.
 \end{enumerate}
 
 \section{Arquitectura técnica}
 
-La aplicación se construirá en \textbf{Python} utilizando \textbf{Streamlit} como framework de frontend.
+La aplicación se construye en \textbf{Python} utilizando \textbf{Streamlit} como framework de frontend.
 
-\subsection{Diagrama de componentes}
-\begin{itemize}[leftmargin=*]
-    \item Usuario → Streamlit UI → Validación de datos → Modelo matemático → Cálculo de coste de oportunidad
-    \item Resultados → Visualización y reflexión
-    \item Simulación de escenarios → Resultados comparativos
-    \item Botón ``Generar plan IA'' → API Externa → Sugerencias personalizadas
-\end{itemize}
+\subsection{Diagrama sistémico}
+La siguiente figura presenta el diagrama sistémico del proyecto, que muestra la interacción entre los actores (estudiante, administrativo), los flujos de datos, los procesos de validación y transformación, el modelo matemático común, y los distintos tipos de salida (gráficos individuales, dashboards, planes IA).
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{C:/Users/penag/OneDrive - Fundación Universitaria Cafam/Fundación Universitaria Cafam/3° Semestre/Seminario de investigación/Proyecto/Documentacion/Docs/Diagrama sistemico.png}
+    \caption{Diagrama sistémico de Shadow-Score Académico}
+    \label{fig:diagrama_sistemico}
+\end{figure}
 
 \subsection{Tecnologías y librerías}
 \begin{table}[H]
@@ -72,41 +76,21 @@ La aplicación se construirá en \textbf{Python} utilizando \textbf{Streamlit} c
 \midrule
 Python 3.10+ & Lenguaje base \\
 Streamlit & Interfaz de usuario, gestión de estado, despliegue \\
-Pandas & Manejo de datos (almacenamiento temporal) \\
+Pandas & Manejo de datos (almacenamiento temporal y procesamiento ETL) \\
 NumPy & Operaciones matemáticas y vectorización \\
 Plotly & Gráficos interactivos (barras, radar, medidores) \\
 Streamlit-extras & Componentes adicionales (gauge, métricas) \\
-\textbf{OpenAI / Google Gemini API} & \textbf{Generación de planes de acción personalizados vía IA} \\
-\textbf{Requests / httpx} & \textbf{Cliente HTTP para consumir la API externa} \\
+OpenAI / Google Gemini API & Generación de planes de acción personalizados vía IA (estudiante) \\
+Requests / httpx & Cliente HTTP para consumir la API externa \\
 Git / GitHub & Control de versiones \\
 Streamlit Cloud & Despliegue continuo \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\subsection{Estructura de carpetas}
-\begin{verbatim}
-shadow-score/
-+-- .streamlit/
-|   +-- config.toml
-+-- src/
-|   +-- __init__.py
-|   +-- modelo.py
-|   +-- utils.py
-|   +-- graficos.py
-|   +-- ia_prompts.py
-+-- assets/
-|   +-- logo.png
-|   +-- estilo.css
-+-- app.py
-+-- requirements.txt
-+-- README.md
-+-- .gitignore
-\end{verbatim}
+\section{Modelo matemático (v4)}
 
-\section{Modelo matemático ajustado (multifactorial)}
-
-El modelo se ha ampliado para reflejar la multifactorialidad. Se basa en parámetros derivados de la literatura (DANE ENUT, estudios colombianos, ODS).
+El modelo se ha calibrado con datos de la \textbf{ENUT 2024‑2025} del DANE y se apoya en literatura complementaria (EAFIT 2010, UdeG 2013, Guevara 2021). Su función es simular el impacto de las cargas no académicas sobre el rendimiento, con fines de reflexión; varios coeficientes se basan en supuestos informados. \textbf{Es el mismo modelo que se aplica tanto al estudiante individual como al procesamiento masivo del rol administrativo}.
 
 \subsection{Variables de entrada}
 \begin{table}[H]
@@ -117,7 +101,7 @@ El modelo se ha ampliado para reflejar la multifactorialidad. Se basa en paráme
 \toprule
 \textbf{Variable} & \textbf{Tipo} & \textbf{Rango / Opciones} & \textbf{Notas} \\
 \midrule
-Género & Categórica & Femenino / Masculino / Otro & Ajuste de parámetros \\
+Género & Categórica & Femenino / Masculino & Ajuste de parámetros \\
 Estrato & Numérico entero & 1–6 & Factor de ponderación \\
 Composición del hogar & Categórica & Vive solo/a, con familia, con pareja, residencia universitaria, otros & Modula apoyo \\
 Dependientes & Numérico entero & 0, 1, 2, 3+ & Personas a cargo \\
@@ -125,56 +109,118 @@ Horas domésticas & Numérico (float) & 0–168 & Desglose opcional \\
 Trabajo remunerado & Sí/No + horas & 0–168 & \\
 Horas de estudio & Numérico & 0–168 & \\
 Promedio actual (opcional) & Numérico & 0–5.0 & Para comparación \\
+\midrule
+\multicolumn{4}{l}{\textbf{Solo para el rol administrativo (además de las anteriores):}} \\
+id\_estudiante & Cadena & Identificador único anonimizado & No se almacena información personal \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\subsection{Cálculo de carga total y fatiga cognitiva}
+\subsection{Carga total y fatiga cognitiva}
+
+La \textbf{carga total} es la suma del trabajo doméstico y laboral (las horas de estudio no se incluyen, pues se consideran la variable sobre la que impacta la fatiga):
 \[
-\text{carga\_total} = \text{horas\_domésticas} + \text{horas\_trabajo}
+\text{carga\_total} = \text{horas\_domésticas} + \text{horas\_trabajo}.
 \]
+
+La fatiga cognitiva se modela con una función sigmoide cuyo punto de inflexión y pendiente se han fijado para la población estudiantil colombiana:
 \[
-\text{fatiga} = \min\left(1,\; \sigma\left(\frac{\text{carga\_total} - \mu}{\kappa}\right) \cdot \alpha_{\text{género}} \cdot \beta_{\text{estrato}} \cdot \gamma_{\text{hogar}} \right)
+\mu = 45\ \text{horas/semana},\quad \kappa = 10.
 \]
-donde \(\sigma(x)=\frac{1}{1+e^{-x}}\), y los parámetros \(\mu, \kappa, \alpha, \beta, \gamma\) están precalibrados con fuentes secundarias.
+Los factores de ajuste \(\alpha_{\text{género}}\), \(\beta_{\text{estrato}}\) y \(\gamma_{\text{hogar}}\) modulan la pendiente de la sigmoide, no su salida, para evitar saturaciones artificiales:
+\[
+\text{fatiga} = \sigma\!\left( \frac{\text{carga\_total} - \mu}{\kappa / (\alpha \cdot \beta \cdot \gamma)} \right),
+\qquad \sigma(x)=\frac{1}{1+e^{-x}}.
+\]
+El producto \(\alpha\beta\gamma\) se limita a un valor máximo de 1.40.
+
+\subsubsection{Factor \(\alpha\) – Género}
+La ENUT reporta una razón de trabajo no remunerado mujer/hombre de \(53.1 / 22.4 \approx 2.37\). Para no duplicar el efecto de la carga horaria ya declarada, se toma la raíz cuadrada (\(\sqrt{2.37}\approx 1.54\)) y se redondea a \(1.40\) (el techo del factor combinado):
+\[
+\alpha_{\text{Femenino}} = 1.40,\quad \alpha_{\text{Masculino}} = 1.00.
+\]
+
+\subsubsection{Factor \(\beta\) – Estrato}
+Basado en el acceso diferencial a servicios de externalización del hogar (ECV 2023). Los estratos bajos carecen de dichos servicios, lo que incrementa la carga real.
+\[
+\begin{array}{c|c}
+\text{Estrato} & \beta \\ \hline
+1 & 1.25 \\
+2 & 1.18 \\
+3 & 1.08 \\
+4 & 1.00 \\
+5 & 0.93 \\
+6 & 0.87
+\end{array}
+\]
+
+\subsubsection{Factor \(\gamma\) – Composición del hogar}
+Ajustado según la distribución de carga doméstica por tipo de hogar (ENUT 2024‑2025, gráficos 9‑10). Los hogares extensos presentan mayor demanda; la residencia universitaria reduce la carga por servicios incluidos.
+\[
+\begin{array}{c|c}
+\text{Hogar} & \gamma \\ \hline
+\text{Residencia universitaria} & 0.75 \\
+\text{Vive solo/a} & 0.90 \\
+\text{Con pareja} & 0.95 \\
+\text{Con familia} & 1.05 \\
+\text{Otros} & 1.00
+\end{array}
+\]
 
 \subsection{Horas de estudio efectivas}
 \[
-\text{horas\_efectivas} = \text{horas\_estudio} \times (1 - \text{fatiga})
+\text{horas\_efectivas} = \text{horas\_estudio} \times (1 - \text{fatiga}).
 \]
+La fatiga actúa como un descuento proporcional: con fatiga = 0.6 solo el 40\% del tiempo de estudio se traduce en aprendizaje de calidad.
 
 \subsection{Estimación del promedio (PPA)}
+Se emplea un modelo lineal con interacción género\(\times\)fatiga:
 \[
 \begin{aligned}
 \text{PPA\_estimado} = &\; \beta_0 + \beta_1 \cdot \text{horas\_efectivas} + \beta_2 \cdot \text{estrato} \\
-&+ \beta_3 \cdot \text{género} + \beta_4 \cdot \text{dependientes} \\
-&+ \beta_5 \cdot (\text{género} \times \text{fatiga})
+&+ \beta_3 \cdot \mathbb{1}_{\text{Femenino}} + \beta_4 \cdot \text{dependientes} \\
+&+ \beta_5 \cdot (\mathbb{1}_{\text{Femenino}} \times \text{fatiga}).
 \end{aligned}
 \]
+Los coeficientes son supuestos basados en la literatura:
+\[
+\begin{array}{c|c|l}
+\text{Coef.} & \text{Valor} & \text{Fuente / Justificación} \\ \hline
+\beta_0 & 3.00 & \text{Intercepto modal del sistema (3.0/5.0)} \\
+\beta_1 & 0.025 & \text{UdeG 2013, Fazio 2004} \\
+\beta_2 & 0.10 & \text{EAFIT 2010} \\
+\beta_3 & -0.10 & \text{Penalización residual de género} \\
+\beta_4 & -0.07 & \text{Efecto marginal por dependiente} \\
+\beta_5 & -0.35 & \text{Interacción género\(\times\)fatiga}
+\end{array}
+\]
+El efecto máximo combinado para una mujer con fatiga extrema es \(-0.45\) puntos, un valor diseñado para la sensibilización sin caer en determinismos excesivos.
 
 \subsection{Shadow-Score}
+Para mejorar su interpretabilidad, el índice se descompone en dos componentes ponderados al 50\%:
 \[
-\text{Shadow-Score} = \min\left(100,\; \frac{\text{carga\_total}}{168} \times 100 \times \text{fatiga}\right)
+\begin{aligned}
+\text{comp\_tiempo} &= \frac{\text{carga\_total}}{168}, \\
+\text{comp\_fatiga} &= \text{fatiga}, \\
+\text{Shadow-Score} &= 100 \times \big(0.5 \cdot \text{comp\_tiempo} + 0.5 \cdot \text{comp\_fatiga}\big).
+\end{aligned}
 \]
-Interpretación: 0–20 (baja penalización), 21–40 (moderada), 41–60 (significativa), 61–80 (alta), 81–100 (extrema).
+Categorías cualitativas: 0–20 baja penalización, 21–40 moderada, 41–60 significativa, 61–80 alta, 81–100 extrema.
 
 \subsection{Coste de oportunidad}
 \[
-\text{coste\_horas} = \text{horas\_estudio} - \text{horas\_efectivas}
+\text{coste\_horas} = \text{horas\_estudio} - \text{horas\_efectivas},
 \]
 \[
-\text{coste\_ppa} = \text{PPA\_actual} - \text{PPA\_estimado} \quad (\text{si se ingresó PPA actual})
+\text{coste\_ppa} = \text{PPA\_actual} - \text{PPA\_estimado} \quad (\text{si se ingresó el promedio actual}).
 \]
-
-\subsection{Escenario de corresponsabilidad}
-Se simula una reducción en la carga doméstica (por defecto 40\%, ajustable) y opcionalmente un apoyo institucional que reduce la fatiga. Se comparan indicadores lado a lado.
 
 \section{Asistente IA: Planes de acción personalizados}
 
-Con el objetivo de convertir la reflexión en acción, la aplicación incorpora un módulo de inteligencia artificial que, basado en los datos del usuario y el coste de oportunidad, genera recomendaciones concretas.
+La aplicación incorpora un módulo de inteligencia artificial que, a partir de los datos del usuario y del coste de oportunidad, genera recomendaciones concretas. Este módulo está disponible exclusivamente para el rol estudiante; no se activa en el módulo administrativo para proteger la confidencialidad de los datos sensibles.
 
 \subsection{Lógica del asistente}
-Se utiliza una API externa (OpenAI GPT-4o mini o Google Gemini Flash) mediante prompting estructurado. El prompt incluye:
+Se utiliza una API externa (OpenAI GPT-4o mini o Google Gemini Flash) con un prompt estructurado que incluye:
 \begin{itemize}
     \item Perfil del usuario (género, estrato, composición del hogar, dependientes).
     \item Carga detectada (horas domésticas, laborales, fatiga cognitiva).
@@ -184,10 +230,10 @@ Se utiliza una API externa (OpenAI GPT-4o mini o Google Gemini Flash) mediante p
 
 \subsection{Funcionalidad}
 \begin{enumerate}
-    \item Botón ``Generar plan de acción con IA'' junto a los resultados.
+    \item Botón “Generar plan de acción con IA” junto a los resultados.
     \item Llamada a la API con clave gestionada mediante variables de entorno.
     \item Visualización de sugerencias formateadas (estrategias de redistribución, apoyos institucionales, gestión del tiempo, recursos externos).
-    \item Incluye disclaimer informativo.
+    \item Incluye un aviso informativo (disclaimer).
 \end{enumerate}
 
 \subsection{Integración técnica}
@@ -197,20 +243,78 @@ Se utiliza una API externa (OpenAI GPT-4o mini o Google Gemini Flash) mediante p
 \toprule
 \textbf{Componente} & \textbf{Detalle} \\
 \midrule
-API Externa & OpenAI API o Google Gemini API (modelo pequeño por costo) \\
+API Externa & OpenAI API o Google Gemini API (modelo económico) \\
 Manejo de clave & \texttt{.streamlit/secrets.toml} y variables de entorno \\
 Prompt engineering & Archivo \texttt{ia\_prompts.py} con placeholders \\
-Llamada asíncrona & \texttt{st.spinner} mientras se espera respuesta \\
-Caché opcional & Evita llamadas repetidas con el mismo perfil \\
+Llamada asíncrona & \texttt{st.spinner} durante la espera de respuesta \\
+Caché & Evita llamadas repetidas con el mismo perfil \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\subsection{Impacto}
-Convierte la herramienta de diagnóstico a un agente de cambio activo, promueve la corresponsabilidad y puede desactivarse fácilmente si no hay presupuesto.
+\section{Módulo administrativo: procesamiento masivo y dashboards}
+
+Este módulo está destinado a personal de la universidad (coordinadores, bienestar universitario, etc.) que necesita analizar la situación de un conjunto de estudiantes sin acceder a datos personales identificables y sin exponer información sensible a APIs externas. A continuación se describen su flujo, formato de entrada, proceso ETL (sin base de datos, usando estructuras internas de Python) y los dashboards de presentación.
+
+\subsection{Formato del archivo CSV de entrada}
+El archivo debe contener una fila por estudiante. Las columnas obligatorias son las mismas que se definieron en la tabla de variables de entrada (sección 4.1), más una columna adicional:
+\begin{itemize}
+    \item \texttt{id\_estudiante}: identificador anónimo (p.ej., un hash del código estudiantil). No se requiere ninguna otra columna de segmentación (como facultad o programa), ya que la universidad cargará un archivo por cada facultad o unidad académica.
+\end{itemize}
+El archivo puede incluir opcionalmente la columna \texttt{promedio\_actual} para calcular el coste de oportunidad en términos de puntos de calificación.
+
+\subsection{Proceso ETL (Extracción, Transformación, Carga)}
+El flujo se implementa íntegramente en Python utilizando Pandas y estructuras internas (DataFrames), sin necesidad de una base de datos externa. Se ejecuta dentro de la aplicación Streamlit bajo autenticación previa del usuario administrativo. Las etapas son:
+
+\begin{enumerate}
+    \item \textbf{Extracción}: el usuario sube el archivo CSV mediante un widget de Streamlit. Se lee con \texttt{pd.read\_csv()} y se verifica la codificación (UTF-8 o Latin-1). El contenido se almacena temporalmente en un DataFrame.
+    \item \textbf{Validación}:
+        \begin{itemize}
+            \item Comprobar la existencia de todas las columnas obligatorias (incluyendo \texttt{id\_estudiante}).
+            \item Verificar rangos: horas entre 0 y 168, estrato entre 1 y 6, dependientes en \{0,1,2,3+\} (se interpreta 3+ como 3), etc.
+            \item Consistencia: si el archivo incluye una columna \texttt{trabaja} (Sí/No), validar que \texttt{horas\_trabajo} sea 0 cuando no trabaja.
+        \end{itemize}
+        Las filas con errores críticos se descartan y se registran en un log que se muestra al usuario.
+    \item \textbf{Limpieza}:
+        \begin{itemize}
+            \item Eliminación de filas duplicadas por \texttt{id\_estudiante} (se conserva la primera).
+            \item Imputación simple de valores faltantes en variables no críticas (por ejemplo, si falta \texttt{promedio\_actual}, se omite el cálculo de coste\_ppa).
+            \item Anonimización: se garantiza que ningún dato de identificación personal (nombres, documentos, correos) esté presente. Si el archivo los contuviera, se excluyen automáticamente.
+        \end{itemize}
+    \item \textbf{Transformación}:
+        \begin{itemize}
+            \item Por cada fila del DataFrame, se aplica el modelo matemático (secciones 4.2 a 4.6) y se calculan:
+                \begin{itemize}
+                    \item Fatiga cognitiva
+                    \item Horas efectivas de estudio
+                    \item Shadow-Score (numérico y categoría cualitativa)
+                    \item Coste de oportunidad en horas
+                    \item Coste de oportunidad en PPA (si se suministró promedio\_actual)
+                \end{itemize}
+            \item Se añaden estas columnas derivadas al DataFrame.
+        \end{itemize}
+    \item \textbf{Carga y almacenamiento interno}: Los resultados (datos originales anonimizados más columnas derivadas) se mantienen en memoria como un DataFrame de Pandas durante la sesión del usuario administrativo. No se utiliza ninguna base de datos externa; toda la información se gestiona con estructuras internas de Python. El usuario puede exportar los resultados agregados (no individuales) en formatos CSV o Excel si lo desea.
+\end{enumerate}
+
+\subsection{Dashboards de presentación de resultados}
+Una vez completado el procesamiento, el sistema muestra un conjunto de \textbf{dashboards interactivos} construidos con Plotly y Streamlit. Los dashboards se actualizan dinámicamente según la muestra cargada. Se ha priorizado la claridad y la utilidad para la toma de decisiones institucionales, sin incluir IA en esta etapa. Los paneles incluyen:
+
+\begin{itemize}
+    \item \textbf{Resumen general}: tarjetas con número total de estudiantes procesados, promedio de Shadow-Score, distribución porcentual por categorías cualitativas (baja, moderada, significativa, alta, extrema).
+    \item \textbf{Distribución de fatiga y cargas}: histogramas y gráficos de densidad de Shadow-Score, fatiga cognitiva, horas efectivas de estudio.
+    \item \textbf{Análisis de brechas de género}: comparación de medias de horas domésticas, fatiga, Shadow-Score y horas efectivas entre mujeres y hombres.
+    \item \textbf{Segmentación por estrato y composición del hogar}: gráficos de barras agrupadas que muestran el Shadow-Score promedio en función del estrato socioeconómico y del tipo de hogar.
+    \item \textbf{Simulación agregada de corresponsabilidad}: permite al administrativo aplicar una reducción porcentual (por defecto 40\%) a las horas domésticas de todos los estudiantes y visualizar cómo cambian los indicadores agregados (Shadow-Score medio, porcentaje en riesgo extremo, etc.) en comparación con el escenario actual.
+    \item \textbf{Exportación de reportes}: opción para descargar los resultados agregados (no datos individuales) en formato CSV, Excel o PDF, para su uso en informes institucionales.
+\end{itemize}
+
+Todos los dashboards se actualizan automáticamente al cargar un nuevo archivo. Para preservar la confidencialidad, no se muestran identificadores de estudiantes en ninguna vista.
 
 \section{Flujo de usuario y funcionalidades}
 
+A continuación se describen los flujos diferenciados para cada rol.
+
+\subsection{Rol estudiante}
 \begin{enumerate}
     \item \textbf{Página de inicio}: presentación, ODS 5, datos DANE.
     \item \textbf{Formulario de entrada}: datos sociodemográficos, carga de trabajo, académicos y percepción.
@@ -220,47 +324,16 @@ Convierte la herramienta de diagnóstico a un agente de cambio activo, promueve 
     \item \textbf{Información adicional}: metodología, fuentes, recursos institucionales.
 \end{enumerate}
 
-\section{Plan de desarrollo (cronograma)}
-
-\begin{table}[H]
-\centering
-\small
-\begin{tabular}{clp{8cm}}
-\toprule
-\textbf{Semana} & \textbf{Fase} & \textbf{Actividades} \\
-\midrule
-1 & Configuración y modelo & Repositorio, dependencias, funciones básicas, pruebas unitarias. \\
-2 & Interfaz básica & Formulario simple, validaciones, integración del modelo. \\
-3 & Visualizaciones & Gráficos Plotly (medidor, radar, barras). \\
-4 & Simulación & Lógica de reducción de carga y apoyo institucional, vista comparativa. \\
-5 & \textbf{Integración de IA} & Configurar API key, prompt estructurado, llamada a la API, mostrar sugerencias. Manejo de errores. \\
-6 & Elementos reflexivos & Expanders con datos DANE, referencias, recomendaciones. \\
-7 & Pruebas de usuario & Feedback, correcciones. \\
-8 & Optimización & Caché, tiempos de respuesta. \\
-9 & Despliegue & Streamlit Cloud, pruebas multi-dispositivo. \\
-10 & Documentación & README, video demostrativo. \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\section{Consideraciones de calidad}
-\begin{itemize}
-    \item Código limpio (PEP 8, docstrings, typing).
-    \item Pruebas unitarias para funciones críticas.
-    \item Manejo de errores y validaciones; en la llamada a la API, capturar fallos.
-    \item Accesibilidad y contraste.
-    \item Privacidad: no almacenar datos personales sin consentimiento.
-\end{itemize}
-
-\section{Ampliaciones futuras}
-\begin{itemize}
-    \item API REST con FastAPI.
-    \item Almacenamiento anónimo de datos para recalibrar el modelo.
-    \item Recomendaciones personalizadas avanzadas con bases de datos locales.
-    \item Dashboard institucional.
-\end{itemize}
+\subsection{Rol administrativo}
+\begin{enumerate}
+    \item \textbf{Acceso autenticado} al panel administrativo.
+    \item \textbf{Carga de archivo CSV} con la estructura definida (incluyendo \texttt{id\_estudiante}).
+    \item \textbf{Procesamiento automático (ETL)} con validación en tiempo real y notificación de errores, utilizando exclusivamente estructuras internas de Python (Pandas).
+    \item \textbf{Visualización de dashboards} con los indicadores agregados y la simulación de corresponsabilidad a nivel de muestra.
+    \item \textbf{Exportación de reportes} para su uso en documentos institucionales.
+\end{enumerate}
 
 \section{Conclusión}
-La versión 3 de Shadow-Score Académico añade un asistente de IA que genera planes de acción personalizados basados en el coste de oportunidad, transformando la reflexión en pasos concretos. El modelo multifactorial precalibrado y la arquitectura en Streamlit garantizan una herramienta robusta, escalable y alineada con los objetivos de sensibilización y acción.
+La versión 4 de Shadow-Score Académico consolida un modelo matemático fundamentado en la ENUT 2024‑2025, que evita saturaciones y ofrece indicadores interpretables. El asistente de IA convierte la reflexión en planes de acción concretos, mientras que la arquitectura en Streamlit asegura una herramienta robusta, escalable y alineada con los objetivos de sensibilización y equidad de género. La incorporación del módulo administrativo, con procesamiento masivo de CSV mediante ETL implementado con estructuras internas de Python (Pandas) y dashboards institucionales, permite a la universidad realizar análisis agregados sin exponer datos sensibles a servicios externos, cumpliendo con las normativas de protección de datos y fortaleciendo la toma de decisiones en políticas de permanencia y equidad de género.
 
 \end{document}
