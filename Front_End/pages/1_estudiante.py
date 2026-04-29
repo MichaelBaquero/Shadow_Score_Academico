@@ -2,14 +2,16 @@
 Shadow-Score Académico - Página del Estudiante
 =============================================
 Formulario de captura de perfil y carga semanal del estudiante.
-Realiza validaciones de campos obligatorios y límite de horas.
-Al validar correctamente guarda los datos en st.session_state
-y redirige a la página de resultados.
-Los errores se muestran como notificaciones toast animadas
-con fondo claro y buen contraste.
 
-Autor: [Tu nombre o equipo]
-Fecha: 2026-04-24
+CORRECCIONES DE CACHE (v2):
+- Se eliminan los `key=` de todos los widgets del formulario para evitar
+  que Streamlit vincule los controles al session_state y reutilice valores
+  residuales de sesiones anteriores.
+- Los valores se leen desde las variables locales del widget (retorno de
+  st.selectbox / st.number_input) y se guardan manualmente en session_state
+  solo al momento de presionar el botón, garantizando datos frescos.
+- Se limpia el estado de resultados previos (`resultados`, `promedio_actual`)
+  antes de redirigir para forzar recálculo limpio en la página de resultados.
 """
 
 import streamlit as st
@@ -30,7 +32,6 @@ aplicar_estilos_globales()
 # ------------------------------------------------------------
 st.markdown(f"""
 <style>
-    /* Fondo general claro y texto oscuro en toda la aplicación */
     .stApp, .main, .block-container, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {{
         background-color: #f8fafc !important;
         color: #1e293b !important;
@@ -39,7 +40,6 @@ st.markdown(f"""
         color: #1e293b !important;
     }}
 
-    /* Inputs de formulario (select y number) */
     div[data-baseweb="select"] > div,
     .stNumberInput input[type="number"] {{
         background-color: #dbeafe !important;
@@ -50,7 +50,6 @@ st.markdown(f"""
         color: #1e293b !important;
     }}
 
-    /* Dropdown abierto: fondo oscuro + texto claro (contraste asegurado) */
     div[data-baseweb="popover"] {{
         background-color: #1e293b !important;
         border: 1px solid #475569 !important;
@@ -75,14 +74,12 @@ st.markdown(f"""
         color: #f1f5f9 !important;
     }}
 
-    /* Overlay transparente */
     div[data-baseweb="layer"] > div, #stPortal > div {{
         background-color: transparent !important;
         color-scheme: light !important;
         backdrop-filter: none !important;
     }}
 
-    /* Alineación etiquetas carga semanal */
     .carga-semanal .stNumberInput label {{
         min-height: 3.2em !important;
         display: flex !important;
@@ -92,7 +89,6 @@ st.markdown(f"""
         word-wrap: break-word !important;
     }}
 
-    /* Botón principal */
     .stButton > button {{
         background-color: {COLOR_BOTON_VERDE} !important;
         color: white !important;
@@ -106,7 +102,6 @@ st.markdown(f"""
         transform: scale(1.02);
     }}
 
-    /* Cabecera personalizada */
     .custom-header {{
         display: flex;
         justify-content: space-between;
@@ -144,7 +139,6 @@ st.markdown(f"""
         box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
     }}
 
-    /* Toast: fondo claro, texto oscuro y animación de entrada */
     div[data-testid="stToast"] {{
         background-color: white !important;
         color: #1e293b !important;
@@ -158,26 +152,18 @@ st.markdown(f"""
         color: #1e293b !important;
     }}
     @keyframes fadeInDown {{
-        from {{
-            opacity: 0;
-            transform: translateY(-20px);
-        }}
-        to {{
-            opacity: 1;
-            transform: translateY(0);
-        }}
+        from {{ opacity: 0; transform: translateY(-20px); }}
+        to   {{ opacity: 1; transform: translateY(0); }}
     }}
 </style>
 """, unsafe_allow_html=True)
 
 # ------------------------------------------------------------
-# 2. JavaScript de respaldo (popover, overlay y toast)
+# 2. JavaScript de respaldo
 # ------------------------------------------------------------
 st.markdown("""
 <script>
-// Refuerza estilos ante cambios dinámicos en el DOM
 new MutationObserver(() => {
-    // Popover
     document.querySelectorAll('div[data-baseweb="popover"]').forEach(pop => {
         pop.style.backgroundColor = '#1e293b';
         pop.style.color = '#f1f5f9';
@@ -189,7 +175,6 @@ new MutationObserver(() => {
             opt.style.color = '#f1f5f9';
         });
     });
-    // Overlay
     document.querySelectorAll('div[data-baseweb="layer"] > div').forEach(overlay => {
         overlay.style.backgroundColor = 'transparent';
         overlay.style.colorScheme = 'light';
@@ -199,7 +184,6 @@ new MutationObserver(() => {
         portal.firstElementChild.style.backgroundColor = 'transparent';
         portal.firstElementChild.style.colorScheme = 'light';
     }
-    // Toast
     document.querySelectorAll('div[data-testid="stToast"]').forEach(toast => {
         toast.style.backgroundColor = 'white';
         toast.style.color = '#1e293b';
@@ -224,6 +208,12 @@ st.markdown(f"""
 
 # ------------------------------------------------------------
 # 4. Formulario de perfil del estudiante
+#
+# CORRECCIÓN CLAVE: ningún widget usa key= para evitar que
+# Streamlit los enlace al session_state y reutilice valores
+# residuales de ejecuciones anteriores. Los valores se capturan
+# desde las variables locales y se persisten manualmente solo
+# al pulsar el botón.
 # ------------------------------------------------------------
 st.markdown("### Perfil del estudiante")
 
@@ -239,14 +229,14 @@ with st.container():
                 ["Femenino", "Masculino"],
                 index=None,
                 placeholder="Selecciona una opción",
-                key="genero"
+                # Sin key= para evitar cache de session_state
             )
             estrato = st.selectbox(
                 "Estrato socioeconómico *",
                 list(range(1, 7)),
                 index=None,
                 placeholder="Elige tu estrato",
-                key="estrato"
+                # Sin key= para evitar cache de session_state
             )
         with col2:
             composicion_hogar = st.selectbox(
@@ -254,7 +244,7 @@ with st.container():
                 ["Vive solo/a", "Con familia", "Con pareja", "Residencia universitaria", "Otros"],
                 index=None,
                 placeholder="Selecciona...",
-                key="composicion"
+                # Sin key= para evitar cache de session_state
             )
             dependientes = st.number_input(
                 "Personas a cargo",
@@ -262,7 +252,7 @@ with st.container():
                 max_value=10,
                 value=0,
                 step=1,
-                key="dependientes"
+                # Sin key= para evitar cache de session_state
             )
 
 # ------------------------------------------------------------
@@ -279,7 +269,7 @@ with col_c1:
         max_value=168.0,
         value=0.0,
         step=1.0,
-        key="domesticas"
+        # Sin key= para evitar cache de session_state
     )
 with col_c2:
     horas_trabajo = st.number_input(
@@ -288,7 +278,7 @@ with col_c2:
         max_value=168.0,
         value=0.0,
         step=1.0,
-        key="trabajo"
+        # Sin key= para evitar cache de session_state
     )
 with col_c3:
     horas_estudio = st.number_input(
@@ -297,9 +287,24 @@ with col_c3:
         max_value=168.0,
         value=0.0,
         step=1.0,
-        key="estudio"
+        # Sin key= para evitar cache de session_state
     )
 st.markdown('</div>', unsafe_allow_html=True)
+
+# ------------------------------------------------------------
+# 5.1 Promedio académico actual (opcional)
+# ------------------------------------------------------------
+st.markdown("### 📊 Promedio académico (opcional)")
+promedio_actual = st.number_input(
+    "Promedio ponderado actual (0.0 – 5.0)",
+    min_value=0.0,
+    max_value=5.0,
+    value=None,
+    step=0.1,
+    placeholder="Ejemplo: 3.8",
+    # Sin key= para evitar cache de session_state
+)
+st.caption("Si proporcionas tu promedio actual, el modelo estimará la posible pérdida de puntos (coste de oportunidad).")
 
 # ------------------------------------------------------------
 # 6. Botón, validación, almacenamiento y redirección
@@ -307,7 +312,6 @@ st.markdown('</div>', unsafe_allow_html=True)
 if st.button("🔍 Calcular mi Shadow-Score", type="primary", use_container_width=False):
     errores = []
 
-    # Campos obligatorios de perfil
     if not genero:
         errores.append("Género es obligatorio.")
     if estrato is None:
@@ -315,31 +319,38 @@ if st.button("🔍 Calcular mi Shadow-Score", type="primary", use_container_widt
     if not composicion_hogar:
         errores.append("Composición del hogar es obligatoria.")
 
-    # Validaciones de horas
     total_horas = horas_domesticas + horas_trabajo + horas_estudio
     if total_horas <= 0:
         errores.append("Debe ingresar al menos una hora en alguna categoría.")
     elif total_horas > 168:
-        errores.append(f"La suma de horas ({total_horas}) excede 168 horas semanales.")
+        errores.append(f"La suma de horas ({total_horas:.0f}) excede 168 horas semanales.")
 
-    # Mostrar errores o guardar datos y redirigir
     if errores:
         for err in errores:
             st.toast(err, icon="❌", duration=10)
     else:
-        # Guardar datos en session_state para usarlos en la página de resultados
+        # ----------------------------------------------------------
+        # CORRECCIÓN: limpiar cualquier resultado previo antes de
+        # guardar los nuevos datos, para forzar recálculo limpio
+        # en la página de resultados y evitar mostrar resultados
+        # de una sesión anterior.
+        # ----------------------------------------------------------
+        for clave_residual in ["resultados", "perfil", "cargas", "promedio_actual"]:
+            st.session_state.pop(clave_residual, None)
+
+        # Guardar datos frescos capturados desde los widgets locales
         st.session_state.perfil = {
-            "genero": genero,
-            "estrato": estrato,
+            "genero":            genero,
+            "estrato":           estrato,
             "composicion_hogar": composicion_hogar,
-            "dependientes": dependientes
+            "dependientes":      dependientes,
         }
         st.session_state.cargas = {
             "horas_domesticas": horas_domesticas,
-            "horas_trabajo": horas_trabajo,
-            "horas_estudio": horas_estudio
+            "horas_trabajo":    horas_trabajo,
+            "horas_estudio":    horas_estudio,
         }
-        # Si más adelante incluyes un campo de promedio, puedes agregarlo aquí:
-        # st.session_state.promedio_actual = promedio_actual
+        # None si el usuario dejó el campo vacío (value=None por defecto)
+        st.session_state.promedio_actual = promedio_actual
 
         st.switch_page("pages/3_resultados_estudiantes.py")
