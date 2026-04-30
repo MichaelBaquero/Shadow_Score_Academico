@@ -1,58 +1,41 @@
 """
-Módulo de conexión con la API de Gemini para Shadow-Score Académico.
-=====================================================================
-CORRECCIÓN v2:
-  - No usa st.secrets (Streamlit lo intercepta y busca en rutas incorrectas).
-  - No depende de __file__ para navegar hacia la raíz del proyecto,
-    porque el contexto de importación puede desplazar parent.parent.
-  - Usa _encontrar_raiz_proyecto() que sube por el árbol de directorios
-    hasta encontrar la carpeta .streamlit/, lo que es robusto sin importar
-    desde dónde Streamlit re-importe el módulo.
-  - Fallback adicional: si la búsqueda por árbol falla, intenta con
-    pathlib.Path.cwd() que en Streamlit apunta a la raíz del proyecto.
-
-FUNCIONES:
-  - generar_plan_gemini(prompt) -> str
-    Envía cualquier prompt (escenarios, plan de mejora, etc.) a Gemini Flash
-    y devuelve la respuesta generada.
+Módulo de conexión con la API de NVIDIA (Mistral) para Shadow-Score Académico.
+================================================================================
+- Sin reintentos.
+- Cualquier error externo (timeout, HTTP 5xx, red) lanza NvidiaAPIError
+  con un mensaje genérico.
 """
 
 import toml
-import google.generativeai as genai
+import requests
 import streamlit as st
 from pathlib import Path
-
 
 # ── Constante: nombre del directorio que marca la raíz del proyecto ──────────
 _MARKER = ".streamlit"
 
+# Configuración de la API de NVIDIA
+INVOKE_URL = "https://integrate.api.nvidia.com/v1/chat/completions"
+MODEL_NAME = "mistralai/mistral-medium-3.5-128b"   # Verifica vigencia
+STREAM = False
+
+
+class NvidiaAPIError(Exception):
+    """Excepción para fallos de conexión con NVIDIA."""
+
 
 def _encontrar_raiz_proyecto() -> Path:
-    """
-    Sube por el árbol de directorios desde la ubicación de este archivo
-    hasta encontrar una carpeta que contenga '.streamlit/'.
-    Si no lo encuentra por __file__, prueba con Path.cwd() (directorio de
-    trabajo actual, que Streamlit fija en la raíz del proyecto al arrancar).
-
-    Returns:
-        Path al directorio raíz del proyecto (el que contiene .streamlit/).
-
-    Raises:
-        FileNotFoundError si no puede localizar la raíz por ninguna vía.
-    """
-    # Estrategia 1: subir desde la ubicación de este módulo
+    """Localiza la raíz del proyecto (contiene .streamlit/)."""
     candidato = Path(__file__).resolve().parent
-    for _ in range(6):  # máximo 6 niveles hacia arriba
+    for _ in range(6):
         if (candidato / _MARKER).is_dir():
             return candidato
         candidato = candidato.parent
 
-    # Estrategia 2: usar el directorio de trabajo actual (cwd)
     candidato_cwd = Path.cwd()
     if (candidato_cwd / _MARKER).is_dir():
         return candidato_cwd
 
-    # Estrategia 3: subir desde cwd también
     candidato = candidato_cwd
     for _ in range(4):
         candidato = candidato.parent
@@ -68,17 +51,7 @@ def _encontrar_raiz_proyecto() -> Path:
 
 
 def _cargar_api_key() -> str:
-    """
-    Localiza secrets.toml y extrae GEMINI_API_KEY.
-    Usa lectura directa con toml, sin pasar por st.secrets.
-
-    Returns:
-        String con la API key.
-
-    Raises:
-        FileNotFoundError si secrets.toml no existe.
-        ValueError si la clave no está definida en el archivo.
-    """
+    """Lee la API key desde .streamlit/secrets.toml."""
     raiz = _encontrar_raiz_proyecto()
     ruta_secrets = raiz / _MARKER / "secrets.toml"
 
@@ -91,55 +64,58 @@ def _cargar_api_key() -> str:
     with open(ruta_secrets, "r", encoding="utf-8") as f:
         config = toml.load(f)
 
-    api_key = config.get("GEMINI_API_KEY")
+    api_key = config.get("NVIDIA_API_KEY")
     if not api_key:
         raise ValueError(
-            "La clave 'GEMINI_API_KEY' no está definida o está vacía en secrets.toml.\n"
+            "La clave 'NVIDIA_API_KEY' no está definida o está vacía en secrets.toml.\n"
             f"Archivo leído: {ruta_secrets}"
         )
-
     return api_key
 
 
-def generar_plan_gemini(prompt: str) -> str:
+def generar_plan_mistral(prompt: str) -> str:
     """
-    Envía un prompt a Gemini Flash y devuelve el texto generado.
+    Envía un prompt al modelo Mistral vía NVIDIA (un solo intento).
 
-    Pensada para ser usada con cualquier prompt bien formado, como:
-      - Escenarios de mejora (prompt corto, 150 palabras)
-      - Plan de acción para el informe PDF (prompt extenso, 500‑700 palabras)
+    Cualquier fallo (timeout, error HTTP, red) genera NvidiaAPIError
+    con el mensaje: "No se ha logrado conectar con el servidor externo de NVIDIA."
 
     Args:
-        prompt: Texto completo del prompt a enviar al modelo.
+        prompt: Texto completo del prompt.
 
     Returns:
-        Texto de la respuesta generada, o mensaje de error amigable.
+        Respuesta generada.
+
+    Raises:
+        NvidiaAPIError: siempre que falle la comunicación con NVIDIA.
+        FileNotFoundError: si falta secrets.toml.
+        ValueError: si falta la API key.
     """
+    api_key = _cargar_api_key()
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Accept": "application/json"
+    }
+
+    payload = {
+        "model": MODEL_NAME,
+        "messages": [{"role": "user", "content": prompt}],
+        "max_tokens": 16384,
+        "temperature": 0.70,
+        "top_p": 1.00,
+        "stream": STREAM
+    }
+
     try:
-        api_key = _cargar_api_key()
-        genai.configure(api_key=api_key)
-
-        model    = genai.GenerativeModel("gemini-2.5-flash")
-        response = model.generate_content(prompt)
-        return response.text
-
-    except FileNotFoundError as e:
-        st.error(f"⚠️ Archivo de configuración no encontrado:\n\n{e}")
-        return (
-            "No se pudo generar el análisis: falta el archivo `secrets.toml`. "
-            "Verifica que existe en `.streamlit/secrets.toml` dentro de la raíz del proyecto."
-        )
-
-    except ValueError as e:
-        st.error(f"⚠️ Clave de API no configurada:\n\n{e}")
-        return (
-            "No se pudo generar el análisis: la clave `GEMINI_API_KEY` "
-            "no está definida en `secrets.toml`."
-        )
+        response = requests.post(INVOKE_URL, headers=headers, json=payload, timeout=30)
+        response.raise_for_status()  # lanza HTTPError para códigos 4xx/5xx
+        data = response.json()
+        return data["choices"][0]["message"]["content"]
 
     except Exception as e:
-        st.error(f"⚠️ Error al conectar con Gemini:\n\n{e}")
-        return (
-            "No se pudo generar el análisis en este momento. "
-            "Por favor, inténtalo de nuevo o comprueba tu conexión a Internet."
-        )
+        # Cualquier error (timeout, ConnectionError, HTTPError, etc.)
+        # se convierte en un único mensaje para el usuario.
+        raise NvidiaAPIError(
+            "No se ha logrado conectar con el servidor externo de NVIDIA."
+        ) from e

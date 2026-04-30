@@ -1,12 +1,12 @@
 """
 Módulo de prompts para el asistente IA de Shadow-Score Académico.
-Contiene las funciones que construyen los textos que se envían a Gemini
-para los escenarios de mejora y, más adelante, para los planes detallados.
+Contiene las funciones que construyen los textos que se envían a Mistral
+(a través de la API de NVIDIA) para los escenarios de mejora y los planes detallados.
 """
 
 def generar_prompt_escenarios(perfil: dict, cargas: dict, resultados: dict) -> str:
     """
-    Construye el prompt para que la IA genere un análisis de escenarios
+    Construye el prompt para que la IA (Mistral) genere un análisis de escenarios
     comparando la situación actual con una posible mejora (corresponsabilidad).
     """
     horas_domesticas = cargas['horas_domesticas']
@@ -61,7 +61,7 @@ Empieza directamente con el análisis, sin saludos ni despedidas.
 def generar_prompt_plan_mejora(perfil: dict, cargas: dict, resultados: dict) -> str:
     """
     Construye el prompt para un plan de acción personalizado extenso,
-    que será usado como contenido principal del informe PDF.
+    que será usado como contenido principal del informe PDF (enviado a Mistral).
     """
     horas_domesticas = cargas['horas_domesticas']
     horas_trabajo    = cargas['horas_trabajo']
