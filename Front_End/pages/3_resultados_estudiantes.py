@@ -1,56 +1,98 @@
 """
-Shadow-Score Académico - Página de Resultados del Estudiante
-=============================================================
-Muestra los indicadores calculados por el modelo matemático,
-un espacio para el gráfico gauge y los escenarios de mejora,
-y un botón para generar un informe PDF (próximamente).
+Shadow-Score Académico - Página de Resultados del Estudiante (v5 - namespace separation)
+=========================================================================================
+ARQUITECTURA DE SESSION_STATE (coherente con 1_estudiante.py):
+  - Claves _w_*  → propiedad exclusiva de Streamlit (widgets del formulario).
+                   Esta página NUNCA las lee ni las modifica.
+  - Claves ss_*  → propiedad exclusiva de la aplicación (dominio).
+                   Esta página las lee y, en su caso, escribe ss_resultados
+                   y ss_escenarios.
 
-Autor: [Tu nombre o equipo]
-Fecha: 2026-04-29
+TOKEN DE EJECUCIÓN (ss_run_id):
+  Cada vez que el usuario pulsa "Calcular", 1_estudiante.py genera un nuevo
+  UUID y lo guarda en ss_run_id. Los resultados guardados en ss_resultados
+  incluyen el campo interno "_run_id". Si ambos no coinciden, esta página
+  descarta el resultado anterior y recalcula con los snapshots actuales.
+  Esto garantiza que nunca se muestren resultados obsoletos aunque el usuario
+  haya navegado hacia atrás y vuelto a la página de resultados.
+
+LIMPIEZA:
+  Al pulsar "Volver al formulario", esta página elimina solo las claves ss_*.
+  Los _w_* permanecen intactos → el usuario ve sus últimos valores al regresar.
 """
 
 import streamlit as st
 import sys
 from pathlib import Path
+import plotly.graph_objects as go
+from datetime import datetime
 
-# ------------------------------------------------------------
-# 0. Configurar rutas para importar Back_end y config
-# ------------------------------------------------------------
+# ── Configurar rutas para importar Back_end y config ─────────────────────────
 FRONT_END = Path(__file__).parent.parent
 sys.path.insert(0, str(FRONT_END))
 
 ROOT = FRONT_END.parent
 sys.path.insert(0, str(ROOT))
 
-from Back_end.modelo import ejecutar_modelo
-from config.estilos_comunes import aplicar_estilos_globales
-from config.colores import (
-    COLOR_PRIMARIO,
-    COLOR_BOTON_VERDE,
-    COLOR_BOTON_VERDE_HOVER,
-    COLOR_FONDO_TARJETA,
-    COLOR_TEXTO_PRINCIPAL,
-    COLOR_TEXTO_SECUNDARIO,
-)
+# ── Importaciones del proyecto ────────────────────────────────────────────────
+from Back_end.modelo        import ejecutar_modelo
+from Back_end.IA_prompts    import generar_prompt_escenarios
+from Back_end.IA_API        import generar_plan_gemini
 
-# ------------------------------------------------------------
-# 1. Estilos base de la aplicación
-# ------------------------------------------------------------
-aplicar_estilos_globales()
+try:
+    from config.estilos_comunes import aplicar_estilos_globales
+    from config.colores import (
+        COLOR_PRIMARIO,
+        COLOR_BOTON_VERDE,
+        COLOR_BOTON_VERDE_HOVER,
+        COLOR_FONDO_TARJETA,
+        COLOR_TEXTO_PRINCIPAL,
+        COLOR_TEXTO_SECUNDARIO,
+    )
+    aplicar_estilos_globales()
+except ImportError:
+    COLOR_PRIMARIO          = "#2563eb"
+    COLOR_BOTON_VERDE       = "#16a34a"
+    COLOR_BOTON_VERDE_HOVER = "#15803d"
+    COLOR_FONDO_TARJETA     = "#ffffff"
+    COLOR_TEXTO_PRINCIPAL   = "#1e293b"
+    COLOR_TEXTO_SECUNDARIO  = "#475569"
 
-# ------------------------------------------------------------
-# 2. CSS personalizado para esta página (tarjetas y layout)
-# ------------------------------------------------------------
+# ── Claves de dominio (las únicas que esta página puede borrar) ───────────────
+DOMAIN_KEYS = [
+    "ss_run_id",
+    "ss_perfil",
+    "ss_cargas",
+    "ss_promedio",
+    "ss_resultados",
+    "ss_escenarios",
+]
+
+# ============================================================
+# 1. CSS GLOBAL
+# ============================================================
 st.markdown(f"""
 <style>
-    .stApp, .main, .block-container, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {{
+    /* ── Fondo y texto base ── */
+    .stApp,
+    .main,
+    .block-container,
+    [data-testid="stAppViewContainer"],
+    [data-testid="stHeader"] {{
         background-color: #f8fafc !important;
         color: {COLOR_TEXTO_PRINCIPAL} !important;
     }}
-    .stApp label, .stMarkdown, .stText, .stTitle, h1, h2, h3, h4, h5, h6, p, span:not([data-baseweb]) {{
+    .stApp label,
+    .stMarkdown,
+    .stText,
+    .stTitle,
+    h1, h2, h3, h4, h5, h6,
+    p,
+    span:not([data-baseweb]) {{
         color: {COLOR_TEXTO_PRINCIPAL} !important;
     }}
 
+    /* ── Botón principal (activo) ── */
     .stButton > button {{
         background-color: {COLOR_BOTON_VERDE} !important;
         color: white !important;
@@ -58,12 +100,47 @@ st.markdown(f"""
         border-radius: 12px !important;
         padding: 0.6rem 1.2rem !important;
         border: none !important;
+        transition: background-color 0.2s ease, transform 0.15s ease;
     }}
     .stButton > button:hover {{
         background-color: {COLOR_BOTON_VERDE_HOVER} !important;
         transform: scale(1.02);
     }}
 
+    /* ── Botón deshabilitado para Generar PDF (fondo gris) ── */
+    .stButton > button:disabled {{
+        background-color: #9ca3af !important;  /* Gris medio */
+        color: white !important;
+        border: 1px solid #6b7280 !important;
+        box-shadow: none !important;
+        cursor: not-allowed !important;
+        opacity: 1 !important;
+        font-weight: bold !important;
+        border-radius: 12px !important;
+    }}
+    .stButton > button:disabled:hover {{
+        transform: none !important;
+        background-color: #9ca3af !important;
+    }}
+
+    /* ── Tooltip personalizado (Solución a "fondo negro, letra negra") ── */
+    /* Forzamos fondo oscuro y texto blanco para alto contraste */
+    div[data-baseweb="tooltip"] {{
+        background-color: #1e293b !important;  /* Gris muy oscuro */
+        color: #ffffff !important;             /* Blanco puro */
+        border-radius: 8px !important;
+        font-size: 14px !important;
+        padding: 10px 14px !important;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3) !important;
+        border: 1px solid #334155 !important;
+        z-index: 9999 !important;
+    }}
+    /* Asegurar que cualquier texto dentro del tooltip sea blanco */
+    div[data-baseweb="tooltip"] * {{
+        color: #ffffff !important;
+    }}
+
+    /* ── Cabecera ── */
     .custom-header {{
         display: flex;
         justify-content: space-between;
@@ -93,6 +170,7 @@ st.markdown(f"""
         font-size: 1.4rem;
     }}
 
+    /* ── Tarjetas de métricas ── */
     .metric-card {{
         background-color: {COLOR_FONDO_TARJETA};
         border-radius: 16px;
@@ -103,6 +181,7 @@ st.markdown(f"""
         display: flex;
         flex-direction: column;
         justify-content: center;
+        border: 1px solid #e2e8f0;
     }}
     .metric-value {{
         font-size: 2.2rem;
@@ -114,36 +193,35 @@ st.markdown(f"""
         font-size: 1rem;
         color: {COLOR_TEXTO_SECUNDARIO};
         margin-bottom: 0.5rem;
+        font-weight: 600;
     }}
     .metric-subtext {{
         font-size: 0.85rem;
         color: #64748b;
     }}
 
+    /* ── Divisor de sección ── */
     .section-divider {{
+        border: none;
         border-top: 2px solid #e2e8f0;
         margin: 2rem 0 1.5rem 0;
     }}
 
-    .placeholder-box {{
-        background-color: #f1f5f9;
-        border: 2px dashed #94a3b8;
-        border-radius: 12px;
-        padding: 2rem;
-        text-align: center;
-        color: #475569;
-        min-height: 250px;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
+    /* ── Badge del run_id (debug, sutil) ── */
+    .run-badge {{
+        font-size: 0.7rem;
+        color: #94a3b8;
+        background: #f1f5f9;
+        border-radius: 4px;
+        padding: 2px 6px;
+        font-family: monospace;
     }}
 </style>
 """, unsafe_allow_html=True)
 
-# ------------------------------------------------------------
-# 3. Cabecera común
-# ------------------------------------------------------------
+# ============================================================
+# 2. CABECERA
+# ============================================================
 st.markdown(f"""
 <div class="custom-header">
     <div class="project-title">📊 Shadow-Score Académico</div>
@@ -153,31 +231,59 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# ------------------------------------------------------------
-# 4. Verificación de sesión (datos del formulario)
-# ------------------------------------------------------------
-if "perfil" not in st.session_state or "cargas" not in st.session_state:
-    st.warning("No se han ingresado los datos del perfil. Por favor completa el formulario primero.")
+# ============================================================
+# 3. VERIFICACIÓN DE SESIÓN
+#    Solo se comprueba ss_run_id y ss_perfil (claves de dominio).
+#    Si no existen, el usuario llegó sin pasar por el formulario.
+# ============================================================
+if "ss_run_id" not in st.session_state or "ss_perfil" not in st.session_state:
+    st.warning(
+        "No se han ingresado los datos del perfil. "
+        "Por favor completa el formulario primero."
+    )
     col_volver, _ = st.columns([1, 3])
     with col_volver:
         if st.button("🔙 Ir al formulario"):
+            # Limpieza quirúrgica: solo claves de dominio ss_*
+            # Los _w_* se preservan → el usuario verá sus últimos valores
+            for key in DOMAIN_KEYS:
+                st.session_state.pop(key, None)
             st.switch_page("pages/1_estudiante.py")
     st.stop()
 
-perfil = st.session_state.perfil
-cargas = st.session_state.cargas
+# ── Recuperar datos de dominio ────────────────────────────────────────────────
+perfil  = st.session_state["ss_perfil"]
+cargas  = st.session_state["ss_cargas"]
+run_id  = st.session_state["ss_run_id"]
 
-# ------------------------------------------------------------
-# 5. Ejecutar el modelo matemático (solo una vez por sesión)
-# ------------------------------------------------------------
-if "resultados" not in st.session_state:
-    promedio_actual = st.session_state.get("promedio_actual", None)
-    resultados = ejecutar_modelo(perfil, cargas, promedio_actual)
-    st.session_state.resultados = resultados
+# ============================================================
+# 4. EJECUTAR MODELO CON VALIDACIÓN POR TOKEN
+#
+#    El resultado guardado incluye el campo interno "_run_id".
+#    Si no coincide con el ss_run_id actual, el resultado es de
+#    una ejecución anterior y debe descartarse → recalcular.
+#    Esto protege contra datos obsoletos aunque el usuario
+#    navegue hacia atrás y vuelva a esta página sin reenviar.
+# ============================================================
+resultado_guardado  = st.session_state.get("ss_resultados", {})
+run_id_guardado     = resultado_guardado.get("_run_id")
+
+if run_id_guardado != run_id:
+    # El resultado no corresponde a este envío de formulario → recalcular
+    promedio = st.session_state.get("ss_promedio")
+    resultados = ejecutar_modelo(perfil, cargas, promedio)
+
+    # Sellar el resultado con el token de ejecución actual
+    resultados["_run_id"] = run_id
+
+    # Persistir en dominio y forzar regeneración de la IA
+    st.session_state["ss_resultados"] = resultados
+    st.session_state.pop("ss_escenarios", None)
 else:
-    resultados = st.session_state.resultados
+    # El resultado ya corresponde a este envío → reutilizar sin recalcular
+    resultados = resultado_guardado
 
-# Desempaquetamos para facilitar el acceso
+# ── Desempaquetar indicadores ─────────────────────────────────────────────────
 shadow_score    = resultados["shadow_score"]
 fatiga          = resultados["fatiga"]
 horas_efectivas = resultados["horas_efectivas"]
@@ -186,11 +292,19 @@ coste_horas     = resultados["coste_horas"]
 coste_ppa       = resultados["coste_ppa"]
 interpretacion  = resultados["interpretacion"]
 
-# ------------------------------------------------------------
-# 6. PRIMERA SECCIÓN: indicadores principales (tarjetas)
-# ------------------------------------------------------------
+# ── Construir perfil_con_promedio sin modificar el snapshot original ──────────
+perfil_con_promedio = perfil.copy()
+perfil_con_promedio["promedio_actual"] = st.session_state.get("ss_promedio")
+
+promedio_actual = st.session_state.get("ss_promedio")
+
+# ============================================================
+# 5. PRIMERA SECCIÓN: TARJETAS DE INDICADORES
+# ============================================================
 st.markdown("### Tus indicadores")
-st.markdown("Resultados del análisis de carga semanal y su posible impacto académico.")
+st.markdown(
+    "Resultados del análisis de carga semanal y su posible impacto académico."
+)
 
 col1, col2, col3, col4 = st.columns(4)
 
@@ -198,18 +312,21 @@ with col1:
     st.markdown(f"""
     <div class="metric-card">
         <div class="metric-label">Shadow‑Score</div>
-        <div class="metric-value" style="color:{COLOR_PRIMARIO}">{shadow_score:.1f}%</div>
+        <div class="metric-value" style="color:{COLOR_PRIMARIO}">
+            {shadow_score:.1f}%
+        </div>
         <div class="metric-subtext">{interpretacion}</div>
     </div>
     """, unsafe_allow_html=True)
 
 with col2:
-    # Mostrar fatiga de 0 a 100 como porcentaje
     st.markdown(f"""
     <div class="metric-card">
         <div class="metric-label">Fatiga cognitiva</div>
-        <div class="metric-value" style="color:#e11d48;">{fatiga*100:.1f}%</div>
-        <div class="metric-subtext">0% = sin fatiga, 100% = máxima</div>
+        <div class="metric-value" style="color:#e11d48;">
+            {fatiga * 100:.1f}%
+        </div>
+        <div class="metric-subtext">0 % = sin fatiga · 100 % = máxima</div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -217,8 +334,12 @@ with col3:
     st.markdown(f"""
     <div class="metric-card">
         <div class="metric-label">Horas efectivas / sem.</div>
-        <div class="metric-value" style="color:#2563eb;">{horas_efectivas:.1f}</div>
-        <div class="metric-subtext">de {cargas['horas_estudio']:.1f} declaradas</div>
+        <div class="metric-value" style="color:#2563eb;">
+            {horas_efectivas:.1f}
+        </div>
+        <div class="metric-subtext">
+            de {cargas['horas_estudio']:.1f} declaradas
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -227,99 +348,239 @@ with col4:
     st.markdown(f"""
     <div class="metric-card">
         <div class="metric-label">PPA estimado (0‑5)</div>
-        <div class="metric-value" style="color:#10b981;">{ppa_texto}</div>
+        <div class="metric-value" style="color:#10b981;">
+            {ppa_texto}
+        </div>
         <div class="metric-subtext">promedio proyectado</div>
     </div>
     """, unsafe_allow_html=True)
 
-# ------------------------------------------------------------
-# 7. Notificaciones interpretativas
-# ------------------------------------------------------------
+# ============================================================
+# 6. NOTIFICACIONES INTERPRETATIVAS
+# ============================================================
 
-# --- Coste de oportunidad ---
+# ── Coste de oportunidad ──────────────────────────────────────────────────────
 if coste_ppa is not None:
-    st.info(f"⏳ **Coste de oportunidad:** pierdes aproximadamente **{coste_horas:.1f} horas efectivas** cada semana "
-            f"y tu promedio podría bajar hasta **{coste_ppa:.2f} puntos** respecto al actual.")
+    st.info(
+        f"⏳ **Coste de oportunidad:** pierdes aproximadamente "
+        f"**{coste_horas:.1f} horas efectivas** cada semana y tu promedio "
+        f"podría bajar hasta **{coste_ppa:.2f} puntos** respecto al actual."
+    )
 else:
-    st.info(f"⏳ **Coste de oportunidad:** pierdes aproximadamente **{coste_horas:.1f} horas efectivas** cada semana.")
+    st.info(
+        f"⏳ **Coste de oportunidad:** pierdes aproximadamente "
+        f"**{coste_horas:.1f} horas efectivas** cada semana."
+    )
 
-# --- Comparación con el promedio real (si se proporcionó) ---
-promedio_actual = st.session_state.get("promedio_actual")
+# ── Comparación promedio real vs. estimado ────────────────────────────────────
 if promedio_actual is not None:
     if promedio_actual > ppa_estimado:
-        st.success(f"📈 Tu promedio actual (**{promedio_actual:.2f}**) está **por encima** del estimado por el modelo "
-                   f"({ppa_estimado:.2f}). ¡Sigue así! Tus hábitos de estudio están dando resultados positivos.")
+        st.success(
+            f"📈 Tu promedio actual (**{promedio_actual:.2f}**) está **por encima** "
+            f"del estimado por el modelo ({ppa_estimado:.2f}). "
+            "¡Sigue así! Tus hábitos de estudio están dando resultados positivos."
+        )
     elif promedio_actual < ppa_estimado:
-        st.warning(f"📉 Tu promedio actual (**{promedio_actual:.2f}**) está **por debajo** del estimado "
-                   f"({ppa_estimado:.2f}). Puede que estés enfrentando dificultades adicionales. "
-                   "Revisa los escenarios de mejora más abajo.")
+        st.warning(
+            f"📉 Tu promedio actual (**{promedio_actual:.2f}**) está **por debajo** "
+            f"del estimado ({ppa_estimado:.2f}). "
+            "Puede que estés enfrentando dificultades adicionales. "
+            "Revisa los escenarios de mejora más abajo."
+        )
     else:
-        st.info(f"📊 Tu promedio actual (**{promedio_actual:.2f}**) coincide exactamente con el estimado por el modelo "
-                f"({ppa_estimado:.2f}).")
+        st.info(
+            f"📊 Tu promedio actual (**{promedio_actual:.2f}**) coincide exactamente "
+            f"con el estimado por el modelo ({ppa_estimado:.2f})."
+        )
 
-# --- Interpretación del Shadow-Score ---
+# ── Interpretación del Shadow-Score ──────────────────────────────────────────
 if shadow_score <= 20:
-    st.success("✅ **Shadow-Score bajo:** Tu carga no académica parece tener poco impacto en tu rendimiento. ¡Sigue así!")
+    st.success(
+        "✅ **Shadow-Score bajo:** Tu carga no académica parece tener poco "
+        "impacto en tu rendimiento. ¡Sigue así!"
+    )
 elif shadow_score <= 40:
-    st.info("ℹ️ **Shadow-Score moderado:** Algunas tareas podrían estar restando tiempo de estudio de calidad.")
+    st.info(
+        "ℹ️ **Shadow-Score moderado:** Algunas tareas podrían estar restando "
+        "tiempo de estudio de calidad."
+    )
 elif shadow_score <= 60:
-    st.warning("⚠️ **Shadow-Score significativo:** La fatiga derivada de tus cargas puede estar afectando tu desempeño académico.")
+    st.warning(
+        "⚠️ **Shadow-Score significativo:** La fatiga derivada de tus cargas "
+        "puede estar afectando tu desempeño académico."
+    )
 elif shadow_score <= 80:
-    st.warning("🔶 **Shadow-Score alto:** Gran parte de tu tiempo efectivo de estudio se está perdiendo. Considera estrategias de redistribución.")
+    st.warning(
+        "🔶 **Shadow-Score alto:** Gran parte de tu tiempo efectivo de estudio "
+        "se está perdiendo. Considera estrategias de redistribución."
+    )
 else:
-    st.error("🔴 **Shadow-Score extremo:** Tus responsabilidades no académicas están consumiendo prácticamente todo tu potencial de estudio. Busca apoyo institucional.")
+    st.error(
+        "🔴 **Shadow-Score extremo:** Tus responsabilidades no académicas están "
+        "consumiendo prácticamente todo tu potencial de estudio. "
+        "Busca apoyo institucional."
+    )
 
-# --- Fatiga ---
+# ── Interpretación de la fatiga ───────────────────────────────────────────────
 if fatiga > 0.6:
-    st.warning(f"🧠 **Fatiga alta ({fatiga*100:.1f}%):** Más del 60% de tu esfuerzo de estudio se diluye. Reducir la carga total o usar técnicas de gestión del tiempo puede ayudar.")
+    st.warning(
+        f"🧠 **Fatiga alta ({fatiga * 100:.1f}%):** Más del 60 % de tu esfuerzo "
+        "de estudio se diluye. Reducir la carga total o usar técnicas de gestión "
+        "del tiempo puede ayudar."
+    )
 elif fatiga > 0.3:
-    st.info(f"🧠 **Fatiga moderada ({fatiga*100:.1f}%):** Aún tienes margen de mejora. Pequeños cambios en la organización pueden marcar diferencia.")
+    st.info(
+        f"🧠 **Fatiga moderada ({fatiga * 100:.1f}%):** Aún tienes margen de mejora. "
+        "Pequeños cambios en la organización pueden marcar diferencia."
+    )
 
-# --- Horas efectivas ---
+# ── Proporción de horas efectivas ────────────────────────────────────────────
 if cargas["horas_estudio"] > 0:
     proporcion_efectiva = horas_efectivas / cargas["horas_estudio"]
     if proporcion_efectiva < 0.5:
-        st.warning(f"📚 Solo el **{proporcion_efectiva:.0%}** de tus horas de estudio son realmente productivas. Revisar tu entorno y técnicas de estudio podría aumentar este porcentaje.")
+        st.warning(
+            f"📚 Solo el **{proporcion_efectiva:.0%}** de tus horas de estudio son "
+            "realmente productivas. Revisar tu entorno y técnicas de estudio "
+            "podría aumentar este porcentaje."
+        )
     elif proporcion_efectiva >= 0.8:
-        st.success("📚 ¡Excelente! Más del 80% de tu tiempo de estudio es efectivo. Mantén tus hábitos actuales.")
+        st.success(
+            "📚 ¡Excelente! Más del 80 % de tu tiempo de estudio es efectivo. "
+            "Mantén tus hábitos actuales."
+        )
 
-st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
+st.markdown('<hr class="section-divider">', unsafe_allow_html=True)
 
-# ------------------------------------------------------------
-# 8. SEGUNDA SECCIÓN: gauge (izq) + escenarios (der)
-# ------------------------------------------------------------
+# ============================================================
+# 7. SEGUNDA SECCIÓN: GAUGE + ESCENARIOS DE MEJORA
+# ============================================================
 col_gauge, col_scenarios = st.columns([1, 1.2], gap="large")
 
+# ── Gauge de fatiga ───────────────────────────────────────────────────────────
 with col_gauge:
     st.subheader("Nivel de fatiga")
-    st.markdown("""
-    <div class="placeholder-box">
-        <span style="font-size:3rem;">📊</span>
-        <p><strong>Gráfico gauge</strong></p>
-        <p>Aquí se mostrará un velocímetro interactivo con la fatiga cognitiva.</p>
-    </div>
-    """, unsafe_allow_html=True)
 
+    fig = go.Figure(go.Indicator(
+        mode   = "gauge+number",
+        value  = fatiga * 100.0,
+        number = {"suffix": " %", "font": {"size": 48}},
+        domain = {"x": [0, 1], "y": [0, 1]},
+        title  = {"text": "Fatiga cognitiva", "font": {"size": 18}},
+        gauge  = {
+            "axis": {
+                "range": [0, 100],
+                "tickwidth": 1,
+                "tickcolor": "#1e293b",
+                "tickfont":  {"color": "#1e293b"},
+            },
+            "bar":         {"color": "#0f172a", "thickness": 0.15},
+            "bgcolor":     "white",
+            "borderwidth": 2,
+            "bordercolor": "#cbd5e1",
+            "steps": [
+                {"range": [0,   30],  "color": "#10b981"},   # verde
+                {"range": [30,  60],  "color": "#f59e0b"},   # ámbar
+                {"range": [60, 100],  "color": "#e11d48"},   # rojo
+            ],
+            "threshold": {
+                "line":      {"color": "#0f172a", "width": 4},
+                "thickness": 0.8,
+                "value":     80,
+            },
+        },
+    ))
+
+    fig.update_layout(
+        height       = 300,
+        margin       = dict(l=20, r=20, t=50, b=20),
+        paper_bgcolor= "rgba(0,0,0,0)",
+        font         = {"color": "#1e293b", "family": "sans-serif"},
+    )
+
+    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+
+# ── Escenarios de mejora generados por IA ────────────────────────────────────
 with col_scenarios:
     st.subheader("Escenarios de mejora")
-    st.markdown("""
-    <div class="placeholder-box">
-        <span style="font-size:3rem;">✨</span>
-        <p><strong>Análisis de escenarios (IA)</strong></p>
-        <p>Al cargar la página se generará automáticamente una comparativa de escenarios
-        (por ejemplo, reduciendo un 30% las horas domésticas) para mostrar tu potencial mejora.</p>
-    </div>
-    """, unsafe_allow_html=True)
 
-# ------------------------------------------------------------
-# 9. Botón para generar informe PDF (propuesta de mejora)
-# ------------------------------------------------------------
-st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
+    # Generar solo si no existe ya, o si fue invalidado junto con los resultados
+    if "ss_escenarios" not in st.session_state:
+        # ------------------------------------------------------------
+        # NOTA PARA DESARROLLADORES:
+        # El módulo de generación de escenarios con IA (Gemini)
+        # está completamente implementado, pero actualmente NO es
+        # funcional porque requiere la compra de créditos en la API
+        # de Google Generative AI. Al ser un MVP, ese coste no se
+        # asume en esta fase.
+        #
+        # Cuando se disponga de los créditos basta con:
+        #   1. Descomentar las líneas de abajo.
+        #   2. Borrar el bloque que asigna el mensaje informativo.
+        # ------------------------------------------------------------
+        with st.spinner("🧠 Preparando análisis de escenarios..."):
+            # Llamada real (requiere créditos de API):
+            # prompt_esc = generar_prompt_escenarios(
+            #     perfil_con_promedio, cargas, resultados
+            # )
+            # texto_escenarios = generar_plan_gemini(prompt_esc)
 
-col_boton, _ = st.columns([1, 2])
-with col_boton:
-    if st.button("📄 Generar informe PDF", disabled=True, help="Próximamente disponible"):
-        # Aquí se activará la segunda llamada a la IA (propuesta de mejora detallada)
-        # y se generará el PDF con todos los resultados.
-        pass
-    st.caption("El informe incluirá una propuesta de mejora personalizada generada por IA.")
+            # Mensaje informativo para el usuario:
+            texto_escenarios = (
+                "> **Funcionalidad no disponible en esta versión**  \n\n"
+                "La generación de escenarios de mejora personalizados con "
+                "inteligencia artificial está implementada, pero requiere el "
+                "uso de créditos en la API de Google Generative AI. Al ser "
+                "esta una versión de prueba (MVP), no se ha habilitado su "
+                "ejecución para evitar costes adicionales.\n\n"
+                "En una futura versión, podrás recibir aquí un análisis "
+                "detallado con propuestas concretas para optimizar tu "
+                "rendimiento académico."
+            )
+            st.session_state["ss_escenarios"] = texto_escenarios
+
+    st.markdown(st.session_state["ss_escenarios"])
+
+# ── BOTÓN GENERAR PDF (IMPLEMENTADO PERO INHABILITADO POR FALTA DE CRÉDITOS) ──
+st.markdown('<hr class="section-divider">', unsafe_allow_html=True)
+
+col1, col2, col3 = st.columns([1, 2, 1])
+with col2:
+    if st.button(
+        "📄 Generar informe PDF",
+        use_container_width=True,
+        disabled=True,   # ← Deshabilitado hasta que se disponga de créditos en Gemini
+        help="⚠️ Funcionalidad no disponible en esta versión.\n\n"
+             "La generación del informe personalizado con IA está "
+             "completamente implementada, pero requiere créditos en la "
+             "API de Google Generative AI. Al ser esta una versión de "
+             "prueba (MVP), no se ha habilitado su ejecución para evitar "
+             "costes adicionales.\n\n"
+             "En una futura versión podrás descargar un PDF con tu plan "
+             "de mejora detallado."
+    ):
+        # ================================================================
+        # La lógica siguiente está lista, pero NO se ejecutará mientras
+        # el botón esté disabled=True.
+        # Para activarla basta con quitar esa línea y tener créditos en
+        # la API de Gemini.
+        # ================================================================
+        with st.spinner("Redactando plan de acción con IA..."):
+            from Back_end.IA_prompts import generar_prompt_plan_mejora
+            from Back_end.IA_API import generar_plan_gemini
+
+            prompt = generar_prompt_plan_mejora(perfil, cargas, resultados)
+            texto_plan = generar_plan_gemini(prompt)
+
+        with st.spinner("Creando documento PDF..."):
+            from Back_end.generador_pdf import generar_pdf_informe
+            from datetime import datetime
+
+            pdf_bytes = generar_pdf_informe(perfil, resultados, texto_plan)
+
+        st.success("Informe generado con éxito. Haz clic abajo para descargarlo.")
+        st.download_button(
+            label="⬇️ Descargar PDF",
+            data=pdf_bytes,
+            file_name=f"Plan_Mejora_ShadowScore_{datetime.now().strftime('%Y%m%d')}.pdf",
+            mime="application/pdf"
+        )

@@ -44,7 +44,6 @@ Thumbs.db
 
 # Archivos sin progreso
 Front_end/pages/2_administrativo.py
-Back_end/IA_API.py
 
 # Secrets
 .streamlit/secrets.toml

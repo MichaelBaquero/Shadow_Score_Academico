@@ -27,7 +27,7 @@
 \maketitle
 
 \begin{abstract}
-El proyecto Shadow-Score Académico consiste en una aplicación web interactiva que permite a estudiantes universitarios reflexionar sobre la distribución de su tiempo entre cargas domésticas, laborales y académicas, y visualizar posibles afectaciones en su rendimiento académico desde una perspectiva de género. Esta versión 4 incorpora un modelo matemático multifactorial calibrado con la ENUT 2024‑2025 del DANE y un asistente de inteligencia artificial que genera planes de acción personalizados basados en el coste de oportunidad calculado. Adicionalmente, se ha desarrollado un \textbf{módulo administrativo} que permite a la universidad cargar archivos CSV con datos de múltiples estudiantes (un archivo por facultad), procesarlos mediante un flujo ETL implementado con estructuras internas de Python (Pandas) y presentar resultados agregados en dashboards interactivos, sin utilizar IA para preservar la confidencialidad de los datos sensibles. La solución se construye con Streamlit y se describe en detalle: arquitectura, modelo ajustado, integración de IA e interfaz.
+El proyecto Shadow-Score Académico consiste en una aplicación web interactiva que permite a estudiantes universitarios reflexionar sobre la distribución de su tiempo entre cargas domésticas, laborales y académicas, y visualizar posibles afectaciones en su rendimiento académico desde una perspectiva de género. Esta versión 4 incorpora un modelo matemático multifactorial calibrado con la ENUT 2024-2025 del DANE y un asistente de inteligencia artificial que genera planes de acción personalizados basados en el coste de oportunidad calculado. Adicionalmente, se ha desarrollado un \textbf{módulo administrativo} que permite a la universidad cargar archivos CSV con datos de múltiples estudiantes (un archivo por facultad), procesarlos mediante un flujo ETL implementado con estructuras internas de Python (Pandas) y presentar resultados agregados en dashboards interactivos, sin utilizar IA para preservar la confidencialidad de los datos sensibles. La solución se construye con Streamlit y se describe en detalle: arquitectura, modelo ajustado, integración de IA e interfaz.
 \end{abstract}
 
 \section{Introducción}
@@ -90,7 +90,7 @@ Streamlit Cloud & Despliegue continuo \\
 
 \section{Modelo matemático (v4)}
 
-El modelo se ha calibrado con datos de la \textbf{ENUT 2024‑2025} del DANE y se apoya en literatura complementaria (EAFIT 2010, UdeG 2013, Guevara 2021). Su función es simular el impacto de las cargas no académicas sobre el rendimiento, con fines de reflexión; varios coeficientes se basan en supuestos informados. \textbf{Es el mismo modelo que se aplica tanto al estudiante individual como al procesamiento masivo del rol administrativo}.
+El modelo se ha calibrado con datos de la \textbf{ENUT 2024-2025} del DANE y se apoya en literatura complementaria (EAFIT 2010, UdeG 2013, Guevara 2021). Su función es simular el impacto de las cargas no académicas sobre el rendimiento, con fines de reflexión; varios coeficientes se basan en supuestos informados. \textbf{Es el mismo modelo que se aplica tanto al estudiante individual como al procesamiento masivo del rol administrativo}.
 
 \subsection{Variables de entrada}
 \begin{table}[H]
@@ -134,13 +134,13 @@ Los factores de ajuste \(\alpha_{\text{género}}\), \(\beta_{\text{estrato}}\) y
 \]
 El producto \(\alpha\beta\gamma\) se limita a un valor máximo de 1.40.
 
-\subsubsection{Factor \(\alpha\) – Género}
+\subsubsection{Factor alfa - Género}
 La ENUT reporta una razón de trabajo no remunerado mujer/hombre de \(53.1 / 22.4 \approx 2.37\). Para no duplicar el efecto de la carga horaria ya declarada, se toma la raíz cuadrada (\(\sqrt{2.37}\approx 1.54\)) y se redondea a \(1.40\) (el techo del factor combinado):
 \[
 \alpha_{\text{Femenino}} = 1.40,\quad \alpha_{\text{Masculino}} = 1.00.
 \]
 
-\subsubsection{Factor \(\beta\) – Estrato}
+\subsubsection{Factor beta - Estrato}
 Basado en el acceso diferencial a servicios de externalización del hogar (ECV 2023). Los estratos bajos carecen de dichos servicios, lo que incrementa la carga real.
 \[
 \begin{array}{c|c}
@@ -154,8 +154,8 @@ Basado en el acceso diferencial a servicios de externalización del hogar (ECV 2
 \end{array}
 \]
 
-\subsubsection{Factor \(\gamma\) – Composición del hogar}
-Ajustado según la distribución de carga doméstica por tipo de hogar (ENUT 2024‑2025, gráficos 9‑10). Los hogares extensos presentan mayor demanda; la residencia universitaria reduce la carga por servicios incluidos.
+\subsubsection{Factor gamma - Composición del hogar}
+Ajustado según la distribución de carga doméstica por tipo de hogar (ENUT 2024-2025, gráficos 9-10). Los hogares extensos presentan mayor demanda; la residencia universitaria reduce la carga por servicios incluidos.
 \[
 \begin{array}{c|c}
 \text{Hogar} & \gamma \\ \hline
@@ -334,6 +334,6 @@ A continuación se describen los flujos diferenciados para cada rol.
 \end{enumerate}
 
 \section{Conclusión}
-La versión 4 de Shadow-Score Académico consolida un modelo matemático fundamentado en la ENUT 2024‑2025, que evita saturaciones y ofrece indicadores interpretables. El asistente de IA convierte la reflexión en planes de acción concretos, mientras que la arquitectura en Streamlit asegura una herramienta robusta, escalable y alineada con los objetivos de sensibilización y equidad de género. La incorporación del módulo administrativo, con procesamiento masivo de CSV mediante ETL implementado con estructuras internas de Python (Pandas) y dashboards institucionales, permite a la universidad realizar análisis agregados sin exponer datos sensibles a servicios externos, cumpliendo con las normativas de protección de datos y fortaleciendo la toma de decisiones en políticas de permanencia y equidad de género.
+La versión 4 de Shadow-Score Académico consolida un modelo matemático fundamentado en la ENUT 2024-2025, que evita saturaciones y ofrece indicadores interpretables. El asistente de IA convierte la reflexión en planes de acción concretos, mientras que la arquitectura en Streamlit asegura una herramienta robusta, escalable y alineada con los objetivos de sensibilización y equidad de género. La incorporación del módulo administrativo, con procesamiento masivo de CSV mediante ETL implementado con estructuras internas de Python (Pandas) y dashboards institucionales, permite a la universidad realizar análisis agregados sin exponer datos sensibles a servicios externos, cumpliendo con las normativas de protección de datos y fortaleciendo la toma de decisiones en políticas de permanencia y equidad de género.
 
 \end{document}

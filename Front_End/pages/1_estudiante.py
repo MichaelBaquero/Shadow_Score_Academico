@@ -1,45 +1,84 @@
 """
-Shadow-Score Académico - Página del Estudiante
-=============================================
-Formulario de captura de perfil y carga semanal del estudiante.
+Shadow-Score Académico - Página del Estudiante (v5 - namespace separation)
+==========================================================================
+ARQUITECTURA DE SESSION_STATE:
+  - Claves _w_*  → propiedad exclusiva de Streamlit (widgets).
+                   Nunca se borran manualmente; Streamlit las gestiona.
+  - Claves ss_*  → propiedad exclusiva de la aplicación (dominio).
+                   Son snapshots inmutables tomados al pulsar el botón.
 
-CORRECCIONES DE CACHE (v2):
-- Se eliminan los `key=` de todos los widgets del formulario para evitar
-  que Streamlit vincule los controles al session_state y reutilice valores
-  residuales de sesiones anteriores.
-- Los valores se leen desde las variables locales del widget (retorno de
-  st.selectbox / st.number_input) y se guardan manualmente en session_state
-  solo al momento de presionar el botón, garantizando datos frescos.
-- Se limpia el estado de resultados previos (`resultados`, `promedio_actual`)
-  antes de redirigir para forzar recálculo limpio en la página de resultados.
+FLUJO:
+  1. Si no existe ss_run_id → sesión nueva → limpiar solo ss_*.
+  2. El usuario rellena el formulario; los _w_* se actualizan en tiempo real.
+  3. Al pulsar "Calcular":
+       a. Leer _w_* para validar (valores actuales del formulario).
+       b. Si válido → nuevo ss_run_id + snapshots ss_perfil/ss_cargas/ss_promedio.
+       c. Borrar ss_resultados y ss_escenarios (forzar recálculo en resultados).
+       d. Redirigir a resultados.
+  4. Al volver desde resultados → limpiar solo ss_* → _w_* intactos.
 """
 
+import uuid
 import streamlit as st
-import sys
-from pathlib import Path
 
-from config.estilos_comunes import aplicar_estilos_globales
-from config.colores import (
-    COLOR_PRIMARIO,
-    COLOR_BOTON_VERDE,
-    COLOR_BOTON_VERDE_HOVER,
-)
+# ── Importaciones del proyecto ──────────────────────────────────────────────
+try:
+    from config.estilos_comunes import aplicar_estilos_globales
+    from config.colores import (
+        COLOR_PRIMARIO,
+        COLOR_BOTON_VERDE,
+        COLOR_BOTON_VERDE_HOVER,
+    )
+    aplicar_estilos_globales()
+except ImportError:
+    # Fallback si se ejecuta fuera del proyecto completo
+    COLOR_PRIMARIO         = "#2563eb"
+    COLOR_BOTON_VERDE      = "#16a34a"
+    COLOR_BOTON_VERDE_HOVER = "#15803d"
 
-aplicar_estilos_globales()
+# ── Claves de dominio (las únicas que la app puede borrar manualmente) ───────
+DOMAIN_KEYS = [
+    "ss_run_id",
+    "ss_perfil",
+    "ss_cargas",
+    "ss_promedio",
+    "ss_resultados",
+    "ss_escenarios",
+]
 
-# ------------------------------------------------------------
-# 1. Estilos CSS personalizados
-# ------------------------------------------------------------
+# ============================================================
+# 0. LIMPIEZA INICIAL — solo claves de dominio, nunca _w_*
+#    Se ejecuta únicamente en sesiones nuevas (sin ss_run_id).
+# ============================================================
+if "ss_run_id" not in st.session_state:
+    for key in DOMAIN_KEYS:
+        st.session_state.pop(key, None)
+
+# ============================================================
+# 1. CSS GLOBAL
+# ============================================================
 st.markdown(f"""
 <style>
-    .stApp, .main, .block-container, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {{
+    /* ── Fondo y texto base ── */
+    .stApp,
+    .main,
+    .block-container,
+    [data-testid="stAppViewContainer"],
+    [data-testid="stHeader"] {{
         background-color: #f8fafc !important;
         color: #1e293b !important;
     }}
-    .stApp label, .stMarkdown, .stText, .stTitle, h1, h2, h3, h4, h5, h6, p, span:not([data-baseweb]) {{
+    .stApp label,
+    .stMarkdown,
+    .stText,
+    .stTitle,
+    h1, h2, h3, h4, h5, h6,
+    p,
+    span:not([data-baseweb]) {{
         color: #1e293b !important;
     }}
 
+    /* ── Inputs ── */
     div[data-baseweb="select"] > div,
     .stNumberInput input[type="number"] {{
         background-color: #dbeafe !important;
@@ -50,6 +89,7 @@ st.markdown(f"""
         color: #1e293b !important;
     }}
 
+    /* ── Dropdown (popover) ── */
     div[data-baseweb="popover"] {{
         background-color: #1e293b !important;
         border: 1px solid #475569 !important;
@@ -74,12 +114,15 @@ st.markdown(f"""
         color: #f1f5f9 !important;
     }}
 
-    div[data-baseweb="layer"] > div, #stPortal > div {{
+    /* ── Overlay transparente (evita fondo oscuro en dropdowns) ── */
+    div[data-baseweb="layer"] > div,
+    #stPortal > div {{
         background-color: transparent !important;
         color-scheme: light !important;
         backdrop-filter: none !important;
     }}
 
+    /* ── Alineación vertical de labels en inputs numéricos ── */
     .carga-semanal .stNumberInput label {{
         min-height: 3.2em !important;
         display: flex !important;
@@ -89,6 +132,7 @@ st.markdown(f"""
         word-wrap: break-word !important;
     }}
 
+    /* ── Botón principal ── */
     .stButton > button {{
         background-color: {COLOR_BOTON_VERDE} !important;
         color: white !important;
@@ -96,12 +140,14 @@ st.markdown(f"""
         border-radius: 12px !important;
         padding: 0.6rem 1.2rem !important;
         border: none !important;
+        transition: background-color 0.2s ease, transform 0.15s ease;
     }}
     .stButton > button:hover {{
         background-color: {COLOR_BOTON_VERDE_HOVER} !important;
         transform: scale(1.02);
     }}
 
+    /* ── Cabecera ── */
     .custom-header {{
         display: flex;
         justify-content: space-between;
@@ -139,6 +185,7 @@ st.markdown(f"""
         box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
     }}
 
+    /* ── Toast ── */
     div[data-testid="stToast"] {{
         background-color: white !important;
         color: #1e293b !important;
@@ -155,12 +202,17 @@ st.markdown(f"""
         from {{ opacity: 0; transform: translateY(-20px); }}
         to   {{ opacity: 1; transform: translateY(0); }}
     }}
+
+    /* ── Info sobre los namespaces (debug, opcional) ── */
+    .namespace-note {{
+        font-size: 0.75rem;
+        color: #94a3b8;
+        margin-top: 0.25rem;
+    }}
 </style>
 """, unsafe_allow_html=True)
 
-# ------------------------------------------------------------
-# 2. JavaScript de respaldo
-# ------------------------------------------------------------
+# ── JS: forzar estilos de popover que Streamlit inyecta fuera del shadow DOM ─
 st.markdown("""
 <script>
 new MutationObserver(() => {
@@ -194,9 +246,9 @@ new MutationObserver(() => {
 </script>
 """, unsafe_allow_html=True)
 
-# ------------------------------------------------------------
-# 3. Cabecera visual
-# ------------------------------------------------------------
+# ============================================================
+# 2. CABECERA
+# ============================================================
 st.markdown(f"""
 <div class="custom-header">
     <div class="project-title">📊 Shadow-Score Académico</div>
@@ -206,151 +258,150 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# ------------------------------------------------------------
-# 4. Formulario de perfil del estudiante
-#
-# CORRECCIÓN CLAVE: ningún widget usa key= para evitar que
-# Streamlit los enlace al session_state y reutilice valores
-# residuales de ejecuciones anteriores. Los valores se capturan
-# desde las variables locales y se persisten manualmente solo
-# al pulsar el botón.
-# ------------------------------------------------------------
+# ============================================================
+# 3. FORMULARIO
+#    Todos los widgets usan key="_w_*" para que Streamlit los
+#    gestione de forma independiente a las claves de dominio ss_*.
+# ============================================================
 st.markdown("### Perfil del estudiante")
 
 with st.container():
     col_icon, col_fields = st.columns([1, 4], gap="medium")
+
     with col_icon:
         st.markdown('<div class="profile-emoji">🧑‍🎓</div>', unsafe_allow_html=True)
+
     with col_fields:
         col1, col2 = st.columns(2)
+
         with col1:
             genero = st.selectbox(
                 "Género *",
                 ["Femenino", "Masculino"],
                 index=None,
                 placeholder="Selecciona una opción",
-                # Sin key= para evitar cache de session_state
+                key="_w_genero",           # ← namespace _w_
             )
             estrato = st.selectbox(
                 "Estrato socioeconómico *",
                 list(range(1, 7)),
                 index=None,
                 placeholder="Elige tu estrato",
-                # Sin key= para evitar cache de session_state
+                key="_w_estrato",
             )
+
         with col2:
             composicion_hogar = st.selectbox(
                 "Composición del hogar *",
-                ["Vive solo/a", "Con familia", "Con pareja", "Residencia universitaria", "Otros"],
+                ["Vive solo/a", "Con familia", "Con pareja",
+                 "Residencia universitaria", "Otros"],
                 index=None,
                 placeholder="Selecciona...",
-                # Sin key= para evitar cache de session_state
+                key="_w_composicion",
             )
             dependientes = st.number_input(
                 "Personas a cargo",
-                min_value=0,
-                max_value=10,
-                value=0,
-                step=1,
-                # Sin key= para evitar cache de session_state
+                min_value=0, max_value=10, value=0, step=1,
+                key="_w_dependientes",
             )
 
-# ------------------------------------------------------------
-# 5. Carga semanal
-# ------------------------------------------------------------
-st.markdown('<div class="carga-semanal">', unsafe_allow_html=True)
 st.markdown("### ⏱️ Carga semanal")
-
 col_c1, col_c2, col_c3 = st.columns(3)
+
 with col_c1:
     horas_domesticas = st.number_input(
         "Horas en tareas domésticas/cuidado",
-        min_value=0.0,
-        max_value=168.0,
-        value=0.0,
-        step=1.0,
-        # Sin key= para evitar cache de session_state
+        min_value=0.0, max_value=168.0, value=0.0, step=1.0,
+        key="_w_domesticas",
     )
 with col_c2:
     horas_trabajo = st.number_input(
         "Horas de trabajo remunerado",
-        min_value=0.0,
-        max_value=168.0,
-        value=0.0,
-        step=1.0,
-        # Sin key= para evitar cache de session_state
+        min_value=0.0, max_value=168.0, value=0.0, step=1.0,
+        key="_w_trabajo",
     )
 with col_c3:
     horas_estudio = st.number_input(
         "Horas de estudio declaradas",
-        min_value=0.0,
-        max_value=168.0,
-        value=0.0,
-        step=1.0,
-        # Sin key= para evitar cache de session_state
+        min_value=0.0, max_value=168.0, value=0.0, step=1.0,
+        key="_w_estudio",
     )
-st.markdown('</div>', unsafe_allow_html=True)
 
-# ------------------------------------------------------------
-# 5.1 Promedio académico actual (opcional)
-# ------------------------------------------------------------
 st.markdown("### 📊 Promedio académico (opcional)")
 promedio_actual = st.number_input(
     "Promedio ponderado actual (0.0 – 5.0)",
-    min_value=0.0,
-    max_value=5.0,
-    value=None,
-    step=0.1,
+    min_value=0.0, max_value=5.0,
+    value=None, step=0.1,
     placeholder="Ejemplo: 3.8",
-    # Sin key= para evitar cache de session_state
+    key="_w_promedio",
 )
-st.caption("Si proporcionas tu promedio actual, el modelo estimará la posible pérdida de puntos (coste de oportunidad).")
+st.caption(
+    "Si proporcionas tu promedio actual, el modelo estimará "
+    "la posible pérdida de puntos (coste de oportunidad)."
+)
 
-# ------------------------------------------------------------
-# 6. Botón, validación, almacenamiento y redirección
-# ------------------------------------------------------------
+# ============================================================
+# 4. BOTÓN — VALIDACIÓN Y ESCRITURA EN ss_*
+# ============================================================
 if st.button("🔍 Calcular mi Shadow-Score", type="primary", use_container_width=False):
-    errores = []
 
-    if not genero:
+    # 4a. Leer los valores actuales del formulario desde session_state por su _w_key.
+    #     Esto es equivalente a las variables locales definidas arriba, pero explícito
+    #     y seguro: refleja exactamente lo que Streamlit tiene guardado en este instante.
+    g   = st.session_state.get("_w_genero")
+    e   = st.session_state.get("_w_estrato")
+    c   = st.session_state.get("_w_composicion")
+    dep = st.session_state.get("_w_dependientes", 0)
+    hd  = st.session_state.get("_w_domesticas", 0.0)
+    ht  = st.session_state.get("_w_trabajo",    0.0)
+    he  = st.session_state.get("_w_estudio",    0.0)
+    pm  = st.session_state.get("_w_promedio")
+
+    # 4b. Validación sobre los valores reales del formulario
+    errores = []
+    if not g:
         errores.append("Género es obligatorio.")
-    if estrato is None:
+    if e is None:
         errores.append("Estrato es obligatorio.")
-    if not composicion_hogar:
+    if not c:
         errores.append("Composición del hogar es obligatoria.")
 
-    total_horas = horas_domesticas + horas_trabajo + horas_estudio
+    total_horas = hd + ht + he
     if total_horas <= 0:
         errores.append("Debe ingresar al menos una hora en alguna categoría.")
     elif total_horas > 168:
-        errores.append(f"La suma de horas ({total_horas:.0f}) excede 168 horas semanales.")
+        errores.append(
+            f"La suma de horas ({total_horas:.0f}) excede las 168 horas semanales."
+        )
 
     if errores:
+        # Mostrar errores sin tocar ninguna clave (ni _w_* ni ss_*)
         for err in errores:
             st.toast(err, icon="❌", duration=10)
+
     else:
-        # ----------------------------------------------------------
-        # CORRECCIÓN: limpiar cualquier resultado previo antes de
-        # guardar los nuevos datos, para forzar recálculo limpio
-        # en la página de resultados y evitar mostrar resultados
-        # de una sesión anterior.
-        # ----------------------------------------------------------
-        for clave_residual in ["resultados", "perfil", "cargas", "promedio_actual"]:
-            st.session_state.pop(clave_residual, None)
+        # 4c. Limpiar SOLO resultados anteriores — los widgets _w_* no se tocan
+        st.session_state.pop("ss_resultados", None)
+        st.session_state.pop("ss_escenarios", None)
 
-        # Guardar datos frescos capturados desde los widgets locales
-        st.session_state.perfil = {
-            "genero":            genero,
-            "estrato":           estrato,
-            "composicion_hogar": composicion_hogar,
-            "dependientes":      dependientes,
-        }
-        st.session_state.cargas = {
-            "horas_domesticas": horas_domesticas,
-            "horas_trabajo":    horas_trabajo,
-            "horas_estudio":    horas_estudio,
-        }
-        # None si el usuario dejó el campo vacío (value=None por defecto)
-        st.session_state.promedio_actual = promedio_actual
+        # 4d. Generar token de ejecución.
+        #     La página de resultados compara este ID con el que acompañó
+        #     el último cálculo guardado; si no coinciden, recalcula.
+        st.session_state["ss_run_id"] = str(uuid.uuid4())
 
+        # 4e. Guardar snapshots de dominio con los datos del formulario actual
+        st.session_state["ss_perfil"] = {
+            "genero":            g,
+            "estrato":           e,
+            "composicion_hogar": c,
+            "dependientes":      dep,
+        }
+        st.session_state["ss_cargas"] = {
+            "horas_domesticas": hd,
+            "horas_trabajo":    ht,
+            "horas_estudio":    he,
+        }
+        st.session_state["ss_promedio"] = pm
+
+        # 4f. Navegar a la página de resultados
         st.switch_page("pages/3_resultados_estudiantes.py")
