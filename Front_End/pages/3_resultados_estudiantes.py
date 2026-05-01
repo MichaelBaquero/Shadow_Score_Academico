@@ -1,5 +1,5 @@
 """
-Shadow-Score Académico - Página de Resultados del Estudiante (v10 - Botón volver con contraste final)
+Shadow-Score Académico - Página de Resultados del Estudiante (v14 - Gráfico 6 meses con hover)
 =========================================================================================
 """
 
@@ -40,7 +40,6 @@ DOMAIN_KEYS = [
     "ss_resultados",
     "ss_escenarios",
     "ss_escenarios_ok",
-    "ss_api_failed",
 ]
 
 # ============================================================
@@ -192,28 +191,6 @@ st.markdown(f"""
         background-color: #f1f5f9 !important;
         border-color: #94a3b8 !important;
     }}
-
-    /* ── BOTÓN PRIMARIO (fondo verde obligatorio) ── */
-    .stButton > button[kind="primary"] {{
-        background-color: {COLOR_BOTON_VERDE} !important;
-        color: white !important;
-        border: none !important;
-        border-radius: 12px !important;
-        font-weight: bold !important;
-        transition: background-color 0.2s ease, transform 0.15s ease;
-    }}
-    .stButton > button[kind="primary"]:hover:not(:disabled) {{
-        background-color: {COLOR_BOTON_VERDE_HOVER} !important;
-        transform: scale(1.02);
-    }}
-    .stButton > button:disabled {{
-        background-color: #9ca3af !important;
-        color: #e5e7eb !important;
-        border: 1px solid #6b7280 !important;
-        cursor: not-allowed !important;
-        opacity: 1 !important;
-        transform: none !important;
-    }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -239,7 +216,7 @@ if "ss_run_id" not in st.session_state or "ss_perfil" not in st.session_state:
     )
     col_volver, _ = st.columns([1, 3])
     with col_volver:
-        if st.button("🔙 Ir al formulario", type="secondary", key="btn_volver"):  # ← type="secondary"
+        if st.button("🔙 Ir al formulario", type="secondary", key="btn_volver"):
             for key in DOMAIN_KEYS:
                 st.session_state.pop(key, None)
             st.switch_page("pages/1_estudiante.py")
@@ -262,7 +239,6 @@ if run_id_guardado != run_id:
     st.session_state["ss_resultados"] = resultados
     st.session_state.pop("ss_escenarios", None)
     st.session_state.pop("ss_escenarios_ok", None)
-    st.session_state.pop("ss_api_failed", None)
 else:
     resultados = resultado_guardado
 
@@ -365,14 +341,15 @@ if cargas["horas_estudio"] > 0:
 st.markdown('<hr class="section-divider">', unsafe_allow_html=True)
 
 # ============================================================
-# 7. SEGUNDA SECCIÓN: GAUGE + ESCENARIOS (VISIBLES INMEDIATAMENTE)
+# 7. SEGUNDA SECCIÓN: GAUGE + GRÁFICO 6 MESES CON HOVER
 # ============================================================
-col_gauge, col_scenarios = st.columns([1, 1.2], gap="large")
 
-# ── Gauge ──
+# ── Gauge (siempre se muestra) ──
+col_gauge, col_grafico = st.columns([1, 1.2], gap="large")
+
 with col_gauge:
     st.subheader("Nivel de fatiga")
-    fig = go.Figure(go.Indicator(
+    fig_gauge = go.Figure(go.Indicator(
         mode="gauge+number",
         value=fatiga * 100.0,
         number={"suffix": " %", "font": {"size": 48}},
@@ -391,119 +368,140 @@ with col_gauge:
             "threshold": {"line": {"color": "#0f172a", "width": 4}, "thickness": 0.8, "value": 80},
         },
     ))
-    fig.update_layout(height=300, margin=dict(l=20, r=20, t=50, b=20), paper_bgcolor="rgba(0,0,0,0)", font={"color": "#1e293b", "family": "sans-serif"})
-    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+    fig_gauge.update_layout(height=300, margin=dict(l=20, r=20, t=50, b=20), paper_bgcolor="rgba(0,0,0,0)", font={"color": "#1e293b", "family": "sans-serif"})
+    st.plotly_chart(fig_gauge, use_container_width=True, config={"displayModeBar": False})
 
-# ── Contenedor para el botón (siempre visible desde el inicio) ──
-button_placeholder = st.empty()
+# ── Gráfico de líneas (solo si hay promedio ingresado) ──
+with col_grafico:
+    st.subheader("Proyección a 6 meses")
 
-# Botón inicial (deshabilitado, gris)
-button_placeholder.button(
-    "⏳ Cargando escenarios...",
-    disabled=True,
-    use_container_width=True,
-    key="btn_placeholder_inicial"
-)
-
-# ── Escenarios de mejora ──
-with col_scenarios:
-    st.subheader("Escenarios de mejora")
-
-    escenarios_ok = st.session_state.get("ss_escenarios_ok", False)
-    texto_escenarios = st.session_state.get("ss_escenarios")
-
-    if not escenarios_ok:
-        with st.spinner("🧠 Analizando tu carga académica. Generando escenarios personalizados..."):
-            try:
-                prompt_esc = generar_prompt_escenarios(perfil_con_promedio, cargas, resultados)
-                texto_escenarios = generar_plan_mistral(prompt_esc)
-
-                # Éxito
-                st.session_state["ss_escenarios"] = texto_escenarios
-                st.session_state["ss_escenarios_ok"] = True
-                st.session_state.pop("ss_api_failed", None)
-
-                st.markdown(texto_escenarios)
-                button_placeholder.button(
-                    "📄 Generar informe PDF",
-                    key="btn_generar_final",
-                    use_container_width=True,
-                    type="primary",
-                    help="Genera un informe personalizado (PDF) con tu plan de mejora."
-                )
-
-            except NvidiaAPIError as e:
-                st.error(f"⚠️ {e}")
-                st.session_state["ss_api_failed"] = True
-                button_placeholder.button(
-                    "📄 Generar informe PDF",
-                    key="btn_generar_final",
-                    disabled=True,
-                    help="No se ha logrado conectar con el servidor externo de NVIDIA.",
-                    use_container_width=True,
-                )
-
-            except Exception as e:
-                st.error(f"⚠️ Error inesperado:\n\n{e}")
-                st.session_state["ss_api_failed"] = True
-                button_placeholder.button(
-                    "📄 Generar informe PDF",
-                    key="btn_generar_final",
-                    disabled=True,
-                    help="No se ha logrado conectar con el servidor externo de NVIDIA.",
-                    use_container_width=True,
-                )
+    if promedio_actual is None:
+        st.info(
+            "ℹ️ Este gráfico de proyección a 6 meses requiere tu **promedio ponderado actual**. "
+            "No fue ingresado en el formulario, por lo que no es posible simular la evolución de tu nota. "
+            "Puedes volver al formulario y añadir ese dato para ver la simulación."
+        )
     else:
-        st.markdown(texto_escenarios)
-        if st.session_state.get("ss_api_failed", False):
-            button_placeholder.button(
-                "📄 Generar informe PDF",
-                key="btn_generar_final",
-                disabled=True,
-                help="No se ha logrado conectar con el servidor externo de NVIDIA.",
-                use_container_width=True,
-            )
-        else:
-            button_placeholder.button(
-                "📄 Generar informe PDF",
-                key="btn_generar_final",
-                use_container_width=True,
-                type="primary",
-                help="Genera un informe personalizado (PDF) con tu plan de mejora."
-            )
+        # Datos del gráfico
+        meses = ["Mes 1", "Mes 2", "Mes 3", "Mes 4", "Mes 5", "Mes 6"]
+        inicio = promedio_actual                     # PUNTO DE PARTIDA REAL
 
-# ============================================================
-# 8. LÓGICA DEL BOTÓN GENERAR PDF
-# ============================================================
-st.markdown('<hr class="section-divider">', unsafe_allow_html=True)
+        factor_fatiga = fatiga
+        caida_mensual = 0.05 + (factor_fatiga * 0.15)
 
-if st.session_state.get("btn_generar_final", False) and not st.session_state.get("ss_api_failed", False):
-    try:
-        with st.spinner("🤖 Redactando plan de acción y generando tu informe personalizado..."):
-            from Back_end.IA_prompts import generar_prompt_plan_mejora
-            from Back_end.generador_pdf import generar_pdf_informe
+        valores_actual = []
+        v = inicio
+        for i in range(6):
+            v = v - caida_mensual
+            if v < 0:
+                v = 0
+            valores_actual.append(round(v, 2))
 
-            prompt_plan = generar_prompt_plan_mejora(perfil, cargas, resultados)
-            texto_plan = generar_plan_mistral(prompt_plan)
-            pdf_bytes = generar_pdf_informe(perfil, resultados, texto_plan)
+        factor_mejora = 0.4
+        mejora_mensual = (0.08 + (fatiga * 0.12)) * (1 + factor_mejora)
 
-        st.success("✅ Informe generado con éxito. Haz clic abajo para descargarlo.")
-        st.download_button(
-            label="⬇️ Descargar PDF",
-            data=pdf_bytes,
-            file_name=f"Plan_Mejora_ShadowScore_{datetime.now().strftime('%Y%m%d')}.pdf",
-            mime="application/pdf"
+        valores_mejora = []
+        v = inicio
+        for i in range(6):
+            if i >= 1:
+                v = v + mejora_mensual * (0.5 + (i * 0.1))
+            valores_mejora.append(round(min(v, 5.0), 2))
+
+        fig_lineas = go.Figure()
+        fig_lineas.add_trace(go.Scatter(
+            x=meses,
+            y=valores_actual,
+            mode='lines+markers',
+            name='Trayectoria actual',
+            line=dict(color='#dc2626', width=4),
+            marker=dict(size=9, color='#dc2626'),
+            hovertemplate="<b>%{x}</b><br>Promedio: %{y:.2f}<extra></extra>"
+        ))
+        fig_lineas.add_trace(go.Scatter(
+            x=meses,
+            y=valores_mejora,
+            mode='lines+markers',
+            name='Con reducción de fatiga',
+            line=dict(color='#16a34a', width=4),
+            marker=dict(size=9, color='#16a34a'),
+            hovertemplate="<b>%{x}</b><br>Promedio: %{y:.2f}<extra></extra>"
+        ))
+
+        fig_lineas.update_layout(
+            title=dict(
+                text="Evolución del promedio estimado",
+                font=dict(color="#1e293b", size=16)
+            ),
+            xaxis=dict(
+                title=dict(
+                    text="Meses",
+                    font=dict(color="#1e293b")
+                ),
+                tickfont=dict(color="#1e293b"),
+                gridcolor="#e2e8f0",
+                showgrid=True
+            ),
+            yaxis=dict(
+                title=dict(
+                    text="Promedio (0-5)",
+                    font=dict(color="#1e293b")
+                ),
+                tickfont=dict(color="#1e293b"),
+                range=[0, 5.5],
+                gridcolor="#e2e8f0"
+            ),
+            legend=dict(
+                orientation="v",
+                x=0.02,
+                y=0.98,
+                xanchor="left",
+                yanchor="top",
+                bgcolor="rgba(255, 255, 255, 0.9)",
+                bordercolor="#cbd5e1",
+                borderwidth=1,
+                font=dict(color="#1e293b", size=12)
+            ),
+            hovermode='x unified',
+            height=350,
+            margin=dict(l=20, r=20, t=60, b=20),
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            font=dict(color="#1e293b", family="sans-serif")
         )
 
-        with st.expander("📋 Ver plan de acción generado (opcional)"):
-            st.markdown(texto_plan)
+        st.plotly_chart(
+            fig_lineas,
+            use_container_width=True,
+            config={
+                'displayModeBar': False,
+                'scrollZoom': False,
+                'doubleClick': False,
+                'staticPlot': False
+            }
+        )
 
-    except NvidiaAPIError:
-        st.error("⚠️ No se ha logrado conectar con el servidor externo de NVIDIA.")
-        st.session_state["ss_api_failed"] = True
-        st.rerun()
+# ============================================================
+# 8. PROPUESTAS DE MEJORA PERSONALIZADAS
+# ============================================================
+st.markdown('<hr class="section-divider">', unsafe_allow_html=True)
+st.subheader("📋 Propuestas de mejora personalizadas")
 
-    except Exception as e:
-        st.error(f"❌ Ha ocurrido un error al generar el informe completo.\n\n**Detalle técnico:** {e}")
-        st.session_state["ss_api_failed"] = True
-        st.rerun()
+if "ss_escenarios" not in st.session_state or not st.session_state.get("ss_escenarios_ok", False):
+    with st.spinner("🧠 Generando propuestas de mejora personalizadas..."):
+        try:
+            prompt_esc = generar_prompt_escenarios(perfil_con_promedio, cargas, resultados)
+            texto_escenarios = generar_plan_mistral(prompt_esc)
+            st.session_state["ss_escenarios"] = texto_escenarios
+            st.session_state["ss_escenarios_ok"] = True
+        except NvidiaAPIError as e:
+            st.error(f"⚠️ {e}")
+            texto_escenarios = "No se pudieron generar las propuestas de mejora en este momento. Intenta de nuevo más tarde."
+        except Exception as e:
+            st.error(f"⚠️ Error inesperado:\n\n{e}")
+            texto_escenarios = "No se pudieron generar las propuestas de mejora en este momento. Intenta de nuevo más tarde."
+else:
+    texto_escenarios = st.session_state["ss_escenarios"]
+
+st.markdown(texto_escenarios)
+
+st.markdown('<hr class="section-divider">', unsafe_allow_html=True)
