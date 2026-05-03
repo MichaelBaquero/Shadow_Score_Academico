@@ -414,24 +414,24 @@ elif estado == "invalido":
             st.error(msg)
 
 # ================================================================
-# 7. BOTÓN PROCESAR (SIN HELP, CONTRASTE CORREGIDO)
+# 7. BOTÓN PROCESAR – AHORA REDIRIGE A Dashboards.py
 # ================================================================
 _, col_proc, _ = st.columns([3, 2, 3])
 
 with col_proc:
     if estado == "valido":
-        # Botón habilitado con contraste correcto (Azul sobre blanco desde el CSS)
         if st.button(
             "⚙️ Procesar",
             use_container_width=True,
             key="btn_procesar"
-            # El parámetro 'help' ha sido eliminado (tu petición)
         ):
-            with st.spinner("🔄 Procesando datos..."):
-                st.success("✅ Procesamiento iniciado (funcionalidad en desarrollo).")
-                st.toast("🔄 Procesando… (funcionalidad en desarrollo)", icon="🔄", duration=8)
+            # Guardamos los datos en el estado de sesión para que Dashboards.py pueda acceder
+            st.session_state.df_validado = _s().df_valido
+            st.session_state.nombre_archivo_procesado = _s().nombre_archivo
+
+            # Redirigir a la página de dashboards (nombre exacto del archivo)
+            st.switch_page("pages/4_Dashboards.py")
     else:
-        # Botón deshabilitado. El CSS aplica #f1f5f9 con texto #64748b y borde sutil.
         st.button(
             "⚙️ Procesar",
             use_container_width=True,

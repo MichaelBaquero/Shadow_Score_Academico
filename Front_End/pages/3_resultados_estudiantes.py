@@ -386,86 +386,93 @@ with col_grafico:
         meses = ["Mes 1", "Mes 2", "Mes 3", "Mes 4", "Mes 5", "Mes 6"]
         inicio = promedio_actual                     # PUNTO DE PARTIDA REAL
 
-        factor_fatiga = fatiga
-        caida_mensual = 0.05 + (factor_fatiga * 0.15)
+        # ── LÍNEA ROJA: Fatiga acumulada sin intervención ──
+        # La fatiga se acumula exponencialmente cada mes
+        factor_fatiga = fatiga * 0.8  # Normalizar (fatiga es 0-1)
+        caida_base = 0.08  # Caída base mensual
+        
+        valores_actual = [round(inicio, 2)]  # Comienza con el promedio del estudiante
+        fatiga_acumulada = 0
+        for mes in range(1, 6):
+            # La fatiga se acumula: cada mes suma más impacto
+            fatiga_acumulada += factor_fatiga * 0.15
+            # Caída = base + fatiga acumulada (efecto multiplicativo)
+            caida_mes = caida_base + (fatiga_acumulada * 0.2)
+            nuevo_valor = valores_actual[-1] - caida_mes
+            valores_actual.append(round(max(nuevo_valor, 0.0), 2))
 
-        valores_actual = []
-        v = inicio
-        for i in range(6):
-            v = v - caida_mensual
-            if v < 0:
-                v = 0
-            valores_actual.append(round(v, 2))
-
-        factor_mejora = 0.4
-        mejora_mensual = (0.08 + (fatiga * 0.12)) * (1 + factor_mejora)
-
-        valores_mejora = []
-        v = inicio
-        for i in range(6):
-            if i >= 1:
-                v = v + mejora_mensual * (0.5 + (i * 0.1))
-            valores_mejora.append(round(min(v, 5.0), 2))
+        # ── LÍNEA VERDE: Con control de fatiga y recuperación ──
+        # Se controla la fatiga y permite recuperación gradual
+        tasa_recuperacion_base = 0.06  # Recuperación base mensual
+        mejora_por_control = (1 - fatiga * 0.5)  # Mayor control con menor fatiga
+        
+        valores_mejora = [round(inicio, 2)]  # Comienza con el promedio del estudiante
+        for mes in range(1, 6):
+            # Recuperación que mejora con el paso del tiempo (mejor control de fatiga)
+            recuperacion_mes = tasa_recuperacion_base * mejora_por_control * (1 + (mes * 0.08))
+            nuevo_valor = valores_mejora[-1] + recuperacion_mes
+            valores_mejora.append(round(min(nuevo_valor, 5.0), 2))
 
         fig_lineas = go.Figure()
         fig_lineas.add_trace(go.Scatter(
             x=meses,
             y=valores_actual,
             mode='lines+markers',
-            name='Trayectoria actual',
-            line=dict(color='#dc2626', width=4),
-            marker=dict(size=9, color='#dc2626'),
+            name='Con fatiga acumulada (sin intervención)',
+            line=dict(color='#dc2626', width=3),
+            marker=dict(size=8, color='#dc2626', symbol='circle'),
             hovertemplate="<b>%{x}</b><br>Promedio: %{y:.2f}<extra></extra>"
         ))
         fig_lineas.add_trace(go.Scatter(
             x=meses,
             y=valores_mejora,
             mode='lines+markers',
-            name='Con reducción de fatiga',
-            line=dict(color='#16a34a', width=4),
-            marker=dict(size=9, color='#16a34a'),
+            name='Con control de fatiga (intervención)',
+            line=dict(color='#16a34a', width=3),
+            marker=dict(size=8, color='#16a34a', symbol='diamond'),
             hovertemplate="<b>%{x}</b><br>Promedio: %{y:.2f}<extra></extra>"
         ))
 
         fig_lineas.update_layout(
             title=dict(
-                text="Evolución del promedio estimado",
-                font=dict(color="#1e293b", size=16)
+                text="Proyección a 6 meses: Impacto de la fatiga acumulada vs controlada",
+                font=dict(color="#1e293b", size=14)
             ),
             xaxis=dict(
                 title=dict(
-                    text="Meses",
-                    font=dict(color="#1e293b")
+                    text="Período (meses)",
+                    font=dict(color="#1e293b", size=12)
                 ),
-                tickfont=dict(color="#1e293b"),
+                tickfont=dict(color="#1e293b", size=11),
                 gridcolor="#e2e8f0",
-                showgrid=True
+                showgrid=True,
+                type='category'
             ),
             yaxis=dict(
                 title=dict(
-                    text="Promedio (0-5)",
-                    font=dict(color="#1e293b")
+                    text="Promedio estimado (0-5)",
+                    font=dict(color="#1e293b", size=12)
                 ),
-                tickfont=dict(color="#1e293b"),
+                tickfont=dict(color="#1e293b", size=11),
                 range=[0, 5.5],
                 gridcolor="#e2e8f0"
             ),
             legend=dict(
-                orientation="v",
-                x=0.02,
-                y=0.98,
-                xanchor="left",
+                orientation="h",
+                x=0.5,
+                y=1.12,
+                xanchor="center",
                 yanchor="top",
-                bgcolor="rgba(255, 255, 255, 0.9)",
+                bgcolor="rgba(255, 255, 255, 0.8)",
                 bordercolor="#cbd5e1",
                 borderwidth=1,
-                font=dict(color="#1e293b", size=12)
+                font=dict(color="#1e293b", size=11)
             ),
             hovermode='x unified',
-            height=350,
-            margin=dict(l=20, r=20, t=60, b=20),
+            height=380,
+            margin=dict(l=50, r=20, t=100, b=50),
             paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(245, 248, 252, 0.5)",
             font=dict(color="#1e293b", family="sans-serif")
         )
 
