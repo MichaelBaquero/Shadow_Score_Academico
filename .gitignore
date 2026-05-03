@@ -43,7 +43,7 @@ coverage.xml
 Thumbs.db
 
 # Archivos sin progreso
-Front_end/pages/2_administrativo.py
+Front_End/pages/4_Dashboards.py
 
 # Secrets
 .streamlit/secrets.toml
