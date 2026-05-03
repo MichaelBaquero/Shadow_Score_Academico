@@ -49,7 +49,7 @@ def _s() -> UploadState:
     return st.session_state.upload_state
 
 # ================================================================
-# 1. CSS (INCLUYE CORRECCIÓN DE CONTRASTE DEL BOTÓN DESHABILITADO)
+# 1. CSS (INCLUYE CORRECCIÓN DE CONTRASTE MEJORADA PARA EL EXPANDER Y ERRORES)
 # ================================================================
 st.markdown(f"""
 <style>
@@ -81,14 +81,23 @@ st.markdown(f"""
         border-left: 4px solid #f59e0b !important;
     }}
     div[data-testid="stError"] {{
-        background-color: #fee2e2 !important;
-        border-left: 4px solid #ef4444 !important;
+        background-color: #fecaca !important;
+        border-left: 4px solid #991b1b !important;
+        border-radius: 6px !important;
+        padding: 12px !important;
+    }}
+    div[data-testid="stError"],
+    div[data-testid="stError"] div,
+    div[data-testid="stError"] p,
+    div[data-testid="stError"] span,
+    div[data-testid="stError"] a {{
+        color: #000000 !important;
+        background-color: transparent !important;
     }}
     div[data-testid="stInfo"] *,
     div[data-testid="stSuccess"] *,
-    div[data-testid="stWarning"] *,
-    div[data-testid="stError"] * {{
-        color: #0f172a !important;
+    div[data-testid="stWarning"] * {{
+        color: #000000 !important;
     }}
 
     /* ── Tooltip: fondo CLARO con texto OSCURO
@@ -136,6 +145,23 @@ st.markdown(f"""
         border: none;
         border-top: 2px solid #e2e8f0;
         margin: 2rem 0;
+    }}
+
+    /* ── Expander ── */
+    div[data-testid="stExpander"] {{
+        background-color: #ffffff !important;
+    }}
+    div[data-testid="stExpander"] div[data-testid="stError"] {{
+        background-color: #fecaca !important;
+        border-left: 4px solid #991b1b !important;
+        border-radius: 6px !important;
+        padding: 12px !important;
+        margin-bottom: 8px !important;
+    }}
+    div[data-testid="stExpander"] div[data-testid="stError"] *,
+    div[data-testid="stExpander"] div[data-testid="stError"] p {{
+        color: #000000 !important;
+        background-color: transparent !important;
     }}
 
     /* ── Cabecera ── */
@@ -278,6 +304,69 @@ st.markdown(f"""
         cursor: not-allowed !important;       /* Icono de no permitido */
         opacity: 1 !important;                /* Sin transparencia extra */
     }}
+
+    /* ── ★ NUEVO: Expander de errores — estilo limpio blanco ── */
+    div[data-testid="stExpander"] {{
+        background-color: #ffffff !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 8px !important;
+        margin-bottom: 0.5rem !important;
+    }}
+
+    /* Header/Summary del expander - fondo blanco */
+    div[data-testid="stExpander"] details {{
+        background-color: #ffffff !important;
+    }}
+    
+    div[data-testid="stExpander"] details > summary {{
+        background-color: #ffffff !important;
+        padding: 12px 16px !important;
+    }}
+    
+    div[data-testid="stExpander"] > div:first-child {{
+        background-color: #ffffff !important;
+    }}
+
+    /* Encabezado del expander (summary): texto principal */
+    div[data-testid="stExpander"] summary,
+    div[data-testid="stExpander"] summary *,
+    div[data-testid="stExpander"] div[role="button"],
+    div[data-testid="stExpander"] div[role="button"] * {{
+        color: #1e293b !important;
+        font-weight: 600 !important;
+        background-color: transparent !important;
+    }}
+
+    /* Iconos SVG en el encabezado (flecha, etc.) */
+    div[data-testid="stExpander"] summary svg,
+    div[data-testid="stExpander"] div[role="button"] svg {{
+        fill: #ef4444 !important;
+        stroke: #ef4444 !important;
+    }}
+
+    /* ── Contenido expandido: blanco limpio ── */
+    div[data-testid="stExpander"] > div:not([role="button"]) {{
+        background-color: #ffffff !important;
+        border-radius: 0 0 8px 8px !important;
+        padding: 0.75rem 0.75rem !important;
+    }}
+
+    /* ── ERROR DENTRO DEL EXPANDER — Colores claros ── */
+    div[data-testid="stExpander"] div[data-testid="stError"] {{
+        background-color: #fecaca !important;
+        border-left: 4px solid #dc2626 !important;
+        margin: 8px 0 !important;
+        padding: 12px !important;
+        border-radius: 6px !important;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important;
+    }}
+    
+    /* Forzar color de texto negro puro para máximo contraste */
+    div[data-testid="stExpander"] div[data-testid="stError"] *,
+    div[data-testid="stExpander"] div[data-testid="stError"] p {{
+        color: #000000 !important;
+        background-color: transparent !important;
+    }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -366,8 +455,7 @@ def validar_archivo_automatico() -> None:
         st.toast(f"✅ CSV válido — {len(df_validado)} registros listos.", icon="✅", duration=8)
     else:
         s.estado_upload = "invalido"
-        if mensajes:
-            st.toast(f"❌ {mensajes[0]}", icon="❌", duration=8)
+        st.toast("⚠️ Archivo con errores, revisar detalle", icon="⚠️", duration=8)
 
 # ================================================================
 # 5. SECCIÓN DE CARGA
@@ -420,21 +508,22 @@ _, col_proc, _ = st.columns([3, 2, 3])
 
 with col_proc:
     if estado == "valido":
-        if st.button(
-            "⚙️ Procesar",
-            use_container_width=True,
-            key="btn_procesar"
-        ):
-            # Guardamos los datos en el estado de sesión para que Dashboards.py pueda acceder
-            st.session_state.df_validado = _s().df_valido
-            st.session_state.nombre_archivo_procesado = _s().nombre_archivo
+        if st.button("⚙️ Procesar", use_container_width=True, key="btn_procesar"):
+            # ── 1. Obtener DataFrame validado
+            df_valido = _s().df_valido
 
-            # Redirigir a la página de dashboards (nombre exacto del archivo)
+            # ── 2. Ejecutar ETL + modelo
+            with st.spinner("🧠 Ejecutando Shadow-Score para cada estudiante..."):
+                from Back_end.procesamiento_etl import procesar_etl
+                df_resultados = procesar_etl(df_valido)
+
+            # ── 3. Guardar en sesión y notificar
+            st.session_state.df_resultados = df_resultados
+            st.session_state.nombre_archivo_procesado = _s().nombre_archivo
+            st.success(f"✅ Procesados {len(df_resultados)} registros correctamente.")
+
+            # ── 4. Redirigir
             st.switch_page("pages/4_Dashboards.py")
     else:
-        st.button(
-            "⚙️ Procesar",
-            use_container_width=True,
-            disabled=True,
-            key="btn_procesar_disabled"
-        )
+        st.button("⚙️ Procesar", use_container_width=True, disabled=True,
+                key="btn_procesar_disabled")

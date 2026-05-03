@@ -10,14 +10,10 @@ def validar_archivo_csv(
 ) -> Tuple[bool, Optional[pd.DataFrame], List[str]]:
     """
     Valida un CSV con la estructura requerida por Shadow-Score Académico.
-
-    Ahora los valores permitidos coinciden exactamente con el formulario
-    del estudiante (Género: solo Femenino/Masculino, ComposiciónHogar incluye Otros,
-    PersonasDependientes entre 0 y 10).
+    Ahora los IDs duplicados son errores y se informan TODOS los fallos de una vez.
 
     Retorna (es_valido, DataFrame_depurado, lista_de_mensajes).
     """
-    # ── Valores por defecto alineados con el frontend ────────────────
     if columnas_esperadas is None:
         columnas_esperadas = [
             "IDEstudiante", "Género", "Estrato", "ComposiciónHogar",
@@ -27,10 +23,10 @@ def validar_archivo_csv(
 
     if categorias_validas is None:
         categorias_validas = {
-            "Género": ["Femenino", "Masculino"],                     # ← ajustado
+            "Género": ["Femenino", "Masculino"],
             "ComposiciónHogar": [
                 "Vive solo/a", "Con familia", "Con pareja",
-                "Residencia universitaria", "Otros"                  # ← añadido
+                "Residencia universitaria", "Otros"
             ]
         }
 
@@ -38,7 +34,7 @@ def validar_archivo_csv(
         margenes_numericos = {
             "Estrato":                {"min": 1, "max": 6},
             "PromedioActual":         {"min": 0.0, "max": 5.0},
-            "PersonasDependientes":   {"min": 0, "max": 10}         # ← nuevo
+            "PersonasDependientes":   {"min": 0, "max": 10}
         }
 
     mensajes = []
@@ -61,27 +57,22 @@ def validar_archivo_csv(
         return False, None, mensajes
 
     df = df[columnas_esperadas]
-
-    # 3. Conjuntos de columnas por tipo
     enteras   = ["IDEstudiante", "Estrato", "PersonasDependientes"]
     flotantes = ["CargaDomestica", "CargaLaboral", "CargaAcademica", "PromedioActual"]
     strings   = ["Género", "ComposiciónHogar"]
 
-    # 4. Validar tipos numéricos
+    # 3. Validar tipos numéricos (ya NO cortamos aquí)
     for col in enteras:
         temp = pd.to_numeric(df[col], errors='coerce')
         nulas = df[col][temp.isna()].index
         for i in nulas:
             mensajes.append(f"Fila {i+2}: '{col}' no es numérico (valor: {df.at[i, col]})")
         if len(nulas) == 0:
-            # Verificar que sea entero sin decimal
             decimales = (temp % 1) != 0
             filas_no_enteras = df.index[decimales & temp.notna()]
             for i in filas_no_enteras:
-                mensajes.append(
-                    f"Fila {i+2}: '{col}' debe ser entero, "
-                    f"pero se encontró decimal ({df.at[i, col]})"
-                )
+                mensajes.append(f"Fila {i+2}: '{col}' debe ser entero, "
+                                f"pero se encontró decimal ({df.at[i, col]})")
         df[col] = temp
 
     for col in flotantes:
@@ -91,39 +82,33 @@ def validar_archivo_csv(
             mensajes.append(f"Fila {i+2}: '{col}' no es numérico (valor: {df.at[i, col]})")
         df[col] = temp
 
-    if mensajes:   # errores de tipo, no seguir
-        return False, None, mensajes
-
-    # 5. Márgenes numéricos
+    # 4. Márgenes numéricos (incluso si hay NaN, se ignoran)
     for col, limites in margenes_numericos.items():
         if col not in df.columns:
             continue
         min_val = limites.get("min")
         max_val = limites.get("max")
+        # Asegurarse de trabajar con valores no nulos para las comparaciones
+        serie = df[col].dropna()
         if min_val is not None:
-            fuera = df[df[col] < min_val]
-            for i in fuera.index:
-                mensajes.append(
-                    f"Fila {i+2}: '{col}' es {df.at[i, col]}, menor que {min_val}"
-                )
+            fuera = serie[serie < min_val]
+            for idx in fuera.index:
+                mensajes.append(f"Fila {idx+2}: '{col}' es {df.at[idx, col]}, menor que {min_val}")
         if max_val is not None:
-            fuera = df[df[col] > max_val]
-            for i in fuera.index:
-                mensajes.append(
-                    f"Fila {i+2}: '{col}' es {df.at[i, col]}, mayor que {max_val}"
-                )
+            fuera = serie[serie > max_val]
+            for idx in fuera.index:
+                mensajes.append(f"Fila {idx+2}: '{col}' es {df.at[idx, col]}, mayor que {max_val}")
 
-    # 6. Suma de horas semanales
+    # 5. Suma de horas semanales
     cargas = ["CargaDomestica", "CargaLaboral", "CargaAcademica"]
-    suma = df[cargas].sum(axis=1)
-    exceso = df[suma > max_horas_semanales]
+    # Sumar ignorando NaN (los NaN se convierten en 0 para la suma, o se omite la fila)
+    suma = df[cargas].sum(axis=1, min_count=1)  # min_count=1 para que si todo es NaN la suma sea NaN
+    exceso = suma[suma > max_horas_semanales]
     for i in exceso.index:
-        mensajes.append(
-            f"Fila {i+2}: suma de horas ({suma.at[i]:.1f}) supera "
-            f"el límite de {max_horas_semanales} h"
-        )
+        mensajes.append(f"Fila {i+2}: suma de horas ({suma.at[i]:.1f}) supera "
+                        f"el límite de {max_horas_semanales} h")
 
-    # 7. Categorías de strings
+    # 6. Categorías de strings
     for col, valores_ok in categorias_validas.items():
         if col not in df.columns:
             continue
@@ -131,15 +116,28 @@ def validar_archivo_csv(
         mascara = ~col_limpia.isin(valores_ok)
         filas_inv = df.index[mascara]
         for i in filas_inv:
-            mensajes.append(
-                f"Fila {i+2}: '{col}' contiene '{df.at[i, col]}' "
-                f"(valores permitidos: {', '.join(valores_ok)})"
-            )
+            mensajes.append(f"Fila {i+2}: '{col}' contiene '{df.at[i, col]}' "
+                            f"(valores permitidos: {', '.join(valores_ok)})")
 
+    # 7. Duplicados de ID (ERROR)
+    # Solo tiene sentido si la columna ID es numérica y sin NaN
+    if df['IDEstudiante'].notna().all():
+        duplicados = df[df.duplicated(subset='IDEstudiante', keep=False)]
+        if not duplicados.empty:
+            for id_dup, grupo in duplicados.groupby('IDEstudiante'):
+                filas = grupo.index + 2
+                mensajes.append(
+                    f"IDEstudiante '{int(id_dup)}' duplicado en filas {', '.join(map(str, filas))}"
+                )
+    else:
+        # Si hay NaN en ID, ya se reportó como error de tipo, no buscamos duplicados
+        pass
+
+    # 8. Resultado final
     if mensajes:
         return False, None, mensajes
 
-    # 8. Conversión final a tipos correctos
+    # 9. Conversión final a tipos correctos (solo si no hay errores)
     for col in enteras:
         df[col] = df[col].astype(int)
     for col in flotantes:
