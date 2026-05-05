@@ -404,7 +404,7 @@ with st.container():
     st.markdown('<div class="scrollable-table-container">', unsafe_allow_html=True)
     st.dataframe(
         df_ejemplo,
-        use_container_width=False,
+        width='content',
         hide_index=True,
         column_config={
             "IDEstudiante":   "ID Estudiante",
@@ -508,7 +508,7 @@ _, col_proc, _ = st.columns([3, 2, 3])
 
 with col_proc:
     if estado == "valido":
-        if st.button("⚙️ Procesar", use_container_width=True, key="btn_procesar"):
+        if st.button("⚙️ Procesar", width='stretch', key="btn_procesar"):
             # ── 1. Obtener DataFrame validado
             df_valido = _s().df_valido
 
@@ -525,5 +525,5 @@ with col_proc:
             # ── 4. Redirigir
             st.switch_page("pages/4_Dashboards.py")
     else:
-        st.button("⚙️ Procesar", use_container_width=True, disabled=True,
+        st.button("⚙️ Procesar", width='stretch', disabled=True,
                 key="btn_procesar_disabled")

@@ -369,7 +369,7 @@ with col_gauge:
         },
     ))
     fig_gauge.update_layout(height=300, margin=dict(l=20, r=20, t=50, b=20), paper_bgcolor="rgba(0,0,0,0)", font={"color": "#1e293b", "family": "sans-serif"})
-    st.plotly_chart(fig_gauge, use_container_width=True, config={"displayModeBar": False})
+    st.plotly_chart(fig_gauge, width='stretch', config={"displayModeBar": False})
 
 # ── Gráfico de líneas (solo si hay promedio ingresado) ──
 with col_grafico:
@@ -478,7 +478,7 @@ with col_grafico:
 
         st.plotly_chart(
             fig_lineas,
-            use_container_width=True,
+            width='stretch',
             config={
                 'displayModeBar': False,
                 'scrollZoom': False,

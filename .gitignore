@@ -42,8 +42,5 @@ coverage.xml
 .DS_Store
 Thumbs.db
 
-# Archivos sin progreso
-Front_End/pages/4_Dashboards.py
-
 # Secrets
 .streamlit/secrets.toml

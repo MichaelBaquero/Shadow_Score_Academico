@@ -343,7 +343,7 @@ st.caption(
 # ============================================================
 # 4. BOTÓN — VALIDACIÓN Y ESCRITURA EN ss_*
 # ============================================================
-if st.button("🔍 Calcular mi Shadow-Score", type="primary", use_container_width=False):
+if st.button("🔍 Calcular mi Shadow-Score", type="primary", width='content'):
 
     # 4a. Leer los valores actuales del formulario desde session_state por su _w_key.
     #     Esto es equivalente a las variables locales definidas arriba, pero explícito
