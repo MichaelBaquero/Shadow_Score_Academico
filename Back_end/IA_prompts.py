@@ -1,3 +1,10 @@
+"""Genera prompts para el asistente de IA de Shadow-Score Académico.
+
+Este módulo construye un prompt estructurado con el perfil del estudiante,
+las cargas reportadas y los resultados del modelo, para que el asistente
+ofrezca recomendaciones claras, prácticas y contextualizadas.
+"""
+
 def generar_prompt_escenarios(perfil: dict, cargas: dict, resultados: dict) -> str:
     """
     Construye el prompt para que la IA (Mistral) genere propuestas de mejora

@@ -1,6 +1,9 @@
-# 4_Dashboards.py
-# Módulo administrativo: panel de dashboards con 4 gráficos + tabla de datos.
-# ----------------------------------------------------------------------------
+"""Página de dashboards administrativos de Shadow-Score Académico.
+
+Presenta métricas institucionales agregadas a partir de los registros
+procesados en el módulo administrativo.
+"""
+
 import streamlit as st
 import pandas as pd
 import numpy as np

@@ -1,5 +1,6 @@
-"""
-Shadow-Score Académico - Aplicación Principal (app.py)
+"""Entrada principal del proyecto Shadow-Score Académico.
+
+Este módulo configura Streamlit y redirige a la página de inicio.
 """
 
 import sys

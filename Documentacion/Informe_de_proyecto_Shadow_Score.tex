@@ -18,23 +18,26 @@
     urlcolor=blue,
 }
 
-\title{Informe de Producción\\Shadow-Score Académico (v4)}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, shapes.symbols, arrows.meta, positioning, fit}
+
+\title{Informe de Producción\\Shadow-Score Académico (v5)}
 \author{Equipo de desarrollo}
-\date{29 de abril de 2026}
+\date{6 de mayo de 2026}
 
 \begin{document}
 
 \maketitle
 
 \begin{abstract}
-El proyecto Shadow-Score Académico consiste en una aplicación web interactiva que permite a estudiantes universitarios reflexionar sobre la distribución de su tiempo entre cargas domésticas, laborales y académicas, y visualizar posibles afectaciones en su rendimiento académico desde una perspectiva de género. Esta versión 4 incorpora un modelo matemático multifactorial calibrado con la ENUT 2024-2025 del DANE y un asistente de inteligencia artificial que genera planes de acción personalizados basados en el coste de oportunidad calculado. Adicionalmente, se ha desarrollado un \textbf{módulo administrativo} que permite a la universidad cargar archivos CSV con datos de múltiples estudiantes (un archivo por facultad), procesarlos mediante un flujo ETL implementado con estructuras internas de Python (Pandas) y presentar resultados agregados en dashboards interactivos, sin utilizar IA para preservar la confidencialidad de los datos sensibles. La solución se construye con Streamlit y se describe en detalle: arquitectura, modelo ajustado, integración de IA e interfaz.
+El proyecto Shadow-Score Académico consiste en una aplicación web interactiva que permite a estudiantes universitarios reflexionar sobre la distribución de su tiempo entre cargas domésticas, laborales y académicas, y visualizar posibles afectaciones en su rendimiento académico desde una perspectiva de género. Esta versión 5 incorpora un modelo matemático multifactorial calibrado con la ENUT 2024-2025 del DANE y un asistente de inteligencia artificial que genera planes de acción personalizados basados en el coste de oportunidad calculado. Adicionalmente, se ha desarrollado un \textbf{módulo administrativo} que permite a la universidad cargar archivos CSV con datos de múltiples estudiantes (un archivo por facultad), procesarlos mediante un flujo ETL implementado con estructuras internas de Python (Pandas) y presentar resultados agregados en dashboards interactivos, sin utilizar IA para preservar la confidencialidad de los datos sensibles. La solución se construye con Streamlit y se describe en detalle: arquitectura, modelo ajustado, integración de IA e interfaz.
 \end{abstract}
 
 \section{Introducción}
 
 El proyecto Shadow-Score Académico consiste en una \textbf{aplicación web interactiva} que permite a estudiantes universitarios reflexionar sobre la distribución de su tiempo entre cargas domésticas, laborales y académicas, y visualizar posibles afectaciones en su rendimiento académico desde una perspectiva de género. La herramienta se construye con base en fundamentos investigativos previos y responde a la retroalimentación recibida, ampliando su enfoque hacia la autorreflexión y la acción, mediante la incorporación de un asistente de inteligencia artificial que genera recomendaciones personalizadas.
 
-El presente informe describe la solución técnica desarrollada: su arquitectura, modelo matemático ajustado (v4), interfaz de usuario e integración del asistente de IA. Además, se incorpora un \textbf{módulo administrativo} destinado a directivos y personal de bienestar universitario, que permite el análisis masivo de datos a través de la carga de archivos CSV, procesamiento ETL (Extracción, Transformación y Carga) con estructuras internas de Python, y la generación de dashboards institucionales sin exposición de datos sensibles a servicios externos. El resultado final es una aplicación desplegada en Streamlit Cloud, accesible públicamente, que atiende tanto la necesidad de reflexión individual como la de toma de decisiones institucional.
+El presente informe describe la solución técnica desarrollada: su arquitectura, modelo matemático ajustado (v5), interfaz de usuario e integración del asistente de IA. Además, se incorpora un \textbf{módulo administrativo} destinado a directivos y personal de bienestar universitario, que permite el análisis masivo de datos a través de la carga de archivos CSV, procesamiento ETL (Extracción, Transformación y Carga) con estructuras internas de Python, y la generación de dashboards institucionales sin exposición de datos sensibles a servicios externos. El resultado final es una aplicación desplegada en Streamlit Cloud, accesible públicamente, que atiende tanto la necesidad de reflexión individual como la de toma de decisiones institucional.
 
 \section{Objetivos de producción}
 
@@ -57,16 +60,6 @@ Desarrollar una aplicación web interactiva que integre un modelo multifactorial
 
 La aplicación se construye en \textbf{Python} utilizando \textbf{Streamlit} como framework de frontend.
 
-\subsection{Diagrama sistémico}
-La siguiente figura presenta el diagrama sistémico del proyecto, que muestra la interacción entre los actores (estudiante, administrativo), los flujos de datos, los procesos de validación y transformación, el modelo matemático común, y los distintos tipos de salida (gráficos individuales, dashboards, planes IA).
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\textwidth]{C:/Users/penag/OneDrive - Fundación Universitaria Cafam/Fundación Universitaria Cafam/3° Semestre/Seminario de investigación/Proyecto/Documentacion/Docs/Diagrama sistemico.png}
-    \caption{Diagrama sistémico de Shadow-Score Académico}
-    \label{fig:diagrama_sistemico}
-\end{figure}
-
 \subsection{Tecnologías y librerías}
 \begin{table}[H]
 \centering
@@ -79,16 +72,15 @@ Streamlit & Interfaz de usuario, gestión de estado, despliegue \\
 Pandas & Manejo de datos (almacenamiento temporal y procesamiento ETL) \\
 NumPy & Operaciones matemáticas y vectorización \\
 Plotly & Gráficos interactivos (barras, radar, medidores) \\
-Streamlit-extras & Componentes adicionales (gauge, métricas) \\
-OpenAI / Google Gemini API & Generación de planes de acción personalizados vía IA (estudiante) \\
-Requests / httpx & Cliente HTTP para consumir la API externa \\
+NVIDIA API (Mistral Medium 3.5) & Generación de planes de acción personalizados vía IA (estudiante) \\
+Requests & Cliente HTTP para consumir la API externa \\
 Git / GitHub & Control de versiones \\
 Streamlit Cloud & Despliegue continuo \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\section{Modelo matemático (v4)}
+\section{Modelo matemático (v5)}
 
 El modelo se ha calibrado con datos de la \textbf{ENUT 2024-2025} del DANE y se apoya en literatura complementaria (EAFIT 2010, UdeG 2013, Guevara 2021). Su función es simular el impacto de las cargas no académicas sobre el rendimiento, con fines de reflexión; varios coeficientes se basan en supuestos informados. \textbf{Es el mismo modelo que se aplica tanto al estudiante individual como al procesamiento masivo del rol administrativo}.
 
@@ -135,7 +127,7 @@ Los factores de ajuste \(\alpha_{\text{género}}\), \(\beta_{\text{estrato}}\) y
 El producto \(\alpha\beta\gamma\) se limita a un valor máximo de 1.40.
 
 \subsubsection{Factor alfa - Género}
-La ENUT reporta una razón de trabajo no remunerado mujer/hombre de \(53.1 / 22.4 \approx 2.37\). Para no duplicar el efecto de la carga horaria ya declarada, se toma la raíz cuadrada (\(\sqrt{2.37}\approx 1.54\)) y se redondea a \(1.40\) (el techo del factor combinado):
+La ENUT 2024-2025 reporta que las mujeres dedican en promedio 7 horas y 35 minutos diarios a trabajo no remunerado, frente a 3 horas y 12 minutos de los hombres. La razón resultante es \(7.58 / 3.20 \approx 2.37\). Para no duplicar el efecto de la carga horaria ya declarada, se toma la raíz cuadrada (\(\sqrt{2.37}\approx 1.54\)) y se redondea a \(1.40\) (el techo del factor combinado):
 \[
 \alpha_{\text{Femenino}} = 1.40,\quad \alpha_{\text{Masculino}} = 1.00.
 \]
@@ -220,7 +212,7 @@ Categorías cualitativas: 0–20 baja penalización, 21–40 moderada, 41–60 s
 La aplicación incorpora un módulo de inteligencia artificial que, a partir de los datos del usuario y del coste de oportunidad, genera recomendaciones concretas. Este módulo está disponible exclusivamente para el rol estudiante; no se activa en el módulo administrativo para proteger la confidencialidad de los datos sensibles.
 
 \subsection{Lógica del asistente}
-Se utiliza una API externa (OpenAI GPT-4o mini o Google Gemini Flash) con un prompt estructurado que incluye:
+Se utiliza la \textbf{NVIDIA API} con el modelo \texttt{mistralai/mistral-medium-3.5-128b} mediante un prompt estructurado que incluye:
 \begin{itemize}
     \item Perfil del usuario (género, estrato, composición del hogar, dependientes).
     \item Carga detectada (horas domésticas, laborales, fatiga cognitiva).
@@ -230,8 +222,8 @@ Se utiliza una API externa (OpenAI GPT-4o mini o Google Gemini Flash) con un pro
 
 \subsection{Funcionalidad}
 \begin{enumerate}
-    \item Botón “Generar plan de acción con IA” junto a los resultados.
-    \item Llamada a la API con clave gestionada mediante variables de entorno.
+    \item Botón "Generar plan de acción con IA" junto a los resultados.
+    \item Llamada a la API con clave gestionada mediante \texttt{st.secrets} (Streamlit Cloud) o \texttt{.streamlit/secrets.toml} (local).
     \item Visualización de sugerencias formateadas (estrategias de redistribución, apoyos institucionales, gestión del tiempo, recursos externos).
     \item Incluye un aviso informativo (disclaimer).
 \end{enumerate}
@@ -243,10 +235,10 @@ Se utiliza una API externa (OpenAI GPT-4o mini o Google Gemini Flash) con un pro
 \toprule
 \textbf{Componente} & \textbf{Detalle} \\
 \midrule
-API Externa & OpenAI API o Google Gemini API (modelo económico) \\
-Manejo de clave & \texttt{.streamlit/secrets.toml} y variables de entorno \\
-Prompt engineering & Archivo \texttt{ia\_prompts.py} con placeholders \\
-Llamada asíncrona & \texttt{st.spinner} durante la espera de respuesta \\
+API Externa & NVIDIA API (modelo \texttt{mistralai/mistral-medium-3.5-128b}) \\
+Manejo de clave & \texttt{st.secrets} en Streamlit Cloud / \texttt{.streamlit/secrets.toml} en local \\
+Prompt engineering & Archivo \texttt{IA\_prompts.py} con placeholders \\
+Llamada HTTP & \texttt{requests} con timeout extendido (10 min) y reintentos automáticos \\
 Caché & Evita llamadas repetidas con el mismo perfil \\
 \bottomrule
 \end{tabular}
@@ -333,7 +325,66 @@ A continuación se describen los flujos diferenciados para cada rol.
     \item \textbf{Exportación de reportes} para su uso en documentos institucionales.
 \end{enumerate}
 
+\section{Alcances y límites del desarrollo actual}
+
+Esta sección describe de manera precisa qué funcionalidades están completamente implementadas en el código actual, cuáles están parcialmente desarrolladas y cuáles fueron planteadas en el diseño pero no se encuentran operativas en la versión desplegada.
+
+\subsection{Alcances implementados}
+
+\subsubsection{Módulo estudiante}
+\begin{itemize}
+    \item Formulario completo de entrada de datos sociodemográficos, carga doméstica, laboral y académica, con validación de rangos en tiempo real.
+    \item Ejecución del modelo matemático completo (fatiga, horas efectivas, PPA estimado, Shadow-Score y coste de oportunidad) sobre los datos ingresados.
+    \item Visualización de resultados mediante gráficos interactivos con Plotly: indicador de fatiga tipo gauge, gráfico de radar multivariable y métricas de coste de oportunidad.
+    \item Simulación de escenario mejorado: el usuario puede ajustar la redistribución de carga doméstica y visualizar el impacto en sus indicadores en comparación con el escenario actual.
+    \item Integración funcional con la NVIDIA API (modelo \texttt{mistralai/mistral-medium-3.5-128b}) para generación de planes de acción personalizados, con timeout extendido (10 minutos) y reintentos automáticos ante errores 5xx.
+    \item Gestión segura de la API key mediante \texttt{st.secrets} en Streamlit Cloud y \texttt{.streamlit/secrets.toml} en entorno local.
+\end{itemize}
+
+\subsubsection{Módulo administrativo}
+\begin{itemize}
+    \item Carga de archivos CSV mediante widget de Streamlit con validación automática de columnas obligatorias, rangos de valores y consistencia entre campos.
+    \item Flujo ETL completo implementado con Pandas: extracción, validación, limpieza (eliminación de duplicados por \texttt{IDEstudiante}, imputación de valores faltantes no críticos) y transformación aplicando el modelo matemático a cada registro.
+    \item Generación de columnas derivadas: \texttt{fatiga}, \texttt{horas\_efectivas}, \texttt{shadow\_score} y \texttt{categoria} cualitativa.
+    \item Dashboard interactivo con cuatro gráficos Plotly: distribución de Shadow-Score por categoría, fatiga promedio por estrato, brecha de género en Shadow-Score y distribución de horas efectivas de estudio.
+    \item Tabla de resultados completa con todos los registros procesados, visible en la interfaz con formato condicional.
+    \item Persistencia de resultados durante la sesión activa mediante \texttt{st.session\_state}.
+\end{itemize}
+
+\subsubsection{Infraestructura y despliegue}
+\begin{itemize}
+    \item Aplicación desplegada en Streamlit Cloud con URL pública permanente, integración continua desde el repositorio GitHub y gestión de secrets en la plataforma.
+    \item Estructura modular del proyecto: separación clara entre \texttt{Back\_end/} (lógica de negocio), \texttt{config/} (estilos, colores, constantes) y \texttt{pages/} (vistas Streamlit).
+    \item Compatibilidad con Python 3.14 mediante versiones actualizadas de dependencias (\texttt{pandas>=2.2.0}, \texttt{numpy>=2.0.0}).
+\end{itemize}
+
+\subsection{Límites del desarrollo actual}
+
+\subsubsection{Ausencia de autenticación real}
+El módulo administrativo no implementa un sistema de autenticación. Cualquier usuario que acceda a la URL de la aplicación puede navegar al panel administrativo sin restricción de credenciales. El informe describe un ``acceso autenticado'' que no está operativo en el código actual.
+
+\subsubsection{Sin exportación de reportes}
+El dashboard administrativo muestra los resultados procesados en pantalla pero no ofrece funcionalidad de exportación a CSV, Excel ni PDF. Esta característica fue planteada en el diseño pero no fue implementada en la versión actual.
+
+\subsubsection{Sin persistencia entre sesiones}
+Los datos procesados (DataFrame de resultados) se almacenan exclusivamente en \texttt{st.session\_state}, lo que implica que se pierden al cerrar o recargar la aplicación. No existe base de datos ni almacenamiento externo. Cada sesión administrativa debe reiniciar la carga del CSV desde cero.
+
+\subsubsection{Modelo con coeficientes supuestos}
+Varios coeficientes del modelo de estimación del PPA (\(\beta_0\), \(\beta_3\), \(\beta_4\), \(\beta_5\)) están marcados explícitamente en el código como \texttt{[SUPUESTO]}, ya que no se derivaron de regresión sobre datos locales. El propio modelo advierte que deben reemplazarse con regresión cuando se cuente con \(n \geq 150\) registros reales.
+
+\subsubsection{Género binario}
+El modelo matemático y el formulario del estudiante contemplan únicamente dos opciones de género (Femenino / Masculino), lo que limita la inclusión de estudiantes no binarios o de otras identidades de género. Esta restricción proviene del diseño actual de los factores de ajuste basados en la ENUT.
+
+\subsubsection{Simulación de corresponsabilidad solo a nivel individual}
+La simulación de escenarios de redistribución de carga doméstica está implementada únicamente para el rol estudiante (vista individual). El dashboard administrativo no incluye la simulación agregada de corresponsabilidad descrita en el diseño, que permitiría aplicar una reducción porcentual a todos los registros y comparar indicadores colectivos.
+
+\subsubsection{Sin caché de llamadas a la IA}
+Aunque el informe menciona caché para evitar llamadas repetidas con el mismo perfil, el código actual no implementa ningún mecanismo de caché (\texttt{st.cache\_data} o similar) sobre las llamadas a la NVIDIA API. Cada solicitud genera una nueva llamada independientemente de si el perfil ya fue procesado anteriormente.
+
+\subsubsection{Columna \texttt{promedio\_actual} sin integración en dashboards}
+El ETL admite la columna opcional \texttt{promedio\_actual} para calcular el coste de oportunidad en PPA, pero el dashboard no visualiza este indicador agregado. Los gráficos actuales no incluyen distribución del coste\_ppa ni comparativa entre PPA actual y estimado a nivel institucional.
+
 \section{Conclusión}
-La versión 4 de Shadow-Score Académico consolida un modelo matemático fundamentado en la ENUT 2024-2025, que evita saturaciones y ofrece indicadores interpretables. El asistente de IA convierte la reflexión en planes de acción concretos, mientras que la arquitectura en Streamlit asegura una herramienta robusta, escalable y alineada con los objetivos de sensibilización y equidad de género. La incorporación del módulo administrativo, con procesamiento masivo de CSV mediante ETL implementado con estructuras internas de Python (Pandas) y dashboards institucionales, permite a la universidad realizar análisis agregados sin exponer datos sensibles a servicios externos, cumpliendo con las normativas de protección de datos y fortaleciendo la toma de decisiones en políticas de permanencia y equidad de género.
+La versión 5 de Shadow-Score Académico consolida un modelo matemático fundamentado en la ENUT 2024-2025 del DANE, que evita saturaciones y ofrece indicadores interpretables. El asistente de IA, implementado mediante la NVIDIA API con el modelo Mistral Medium 3.5, convierte la reflexión en planes de acción concretos, mientras que la arquitectura en Streamlit asegura una herramienta robusta, escalable y alineada con los objetivos de sensibilización y equidad de género. La incorporación del módulo administrativo, con procesamiento masivo de CSV mediante ETL implementado con estructuras internas de Python (Pandas) y dashboards institucionales, permite a la universidad realizar análisis agregados sin exponer datos sensibles a servicios externos, cumpliendo con las normativas de protección de datos y fortaleciendo la toma de decisiones en políticas de permanencia y equidad de género.
 
 \end{document}

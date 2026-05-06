@@ -1,3 +1,9 @@
+"""Estilos globales compartidos para todas las páginas del proyecto.
+
+Este módulo exporta la función aplicar_estilos_globales() que inyecta
+CSS de presentación para Streamlit sin lógica ejecutable adicional.
+"""
+
 import streamlit as st
 
 def aplicar_estilos_globales():

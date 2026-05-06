@@ -1,30 +1,49 @@
 # Comparativa de versiones: Shadow-Score Académico
 
-Este documento resume las diferencias clave entre las versiones del proyecto **Shadow-Score Académico**, desarrolladas entre marzo y abril de 2026. La evolución refleja la incorporación de retroalimentación, la ampliación del modelo matemático, la integración de inteligencia artificial y la adición de un módulo administrativo para análisis institucional.
+Este documento resume las diferencias clave entre las versiones del proyecto **Shadow-Score Académico**, desarrolladas entre marzo y abril de 2026. La evolución culmina en la versión 5, que representa la versión final del proyecto con el modelo calibrado, el asistente de IA estabilizado y el módulo administrativo consolidado para análisis institucional.
 
-## Cuadro comparativo
+## Evolución técnica del proyecto
 
-| **Característica** | **Versión 1 (Informe inicial)** | **Versión 2 (Multifactorial)** | **Versión 3 (Con asistente IA)** | **Versión 4 (Con módulo administrativo)** |
-|-------------------|--------------------------------|-------------------------------|----------------------------------|-------------------------------------------|
-| **Objetivo general** | Estimar el efecto de la carga doméstica en el rendimiento académico. | Integrar modelo multifactorial (carga doméstica, laboral, composición del hogar, contexto). | Igual que v2, más planes de acción personalizados con IA. | Igual que v3, más **análisis masivo para la universidad** mediante carga CSV, ETL y dashboards. |
-| **Roles de usuario** | Solo estudiante individual. | Solo estudiante individual. | Solo estudiante individual. | **Estudiante** (individual + IA) y **Administrativo** (carga masiva, dashboards, sin IA). |
-| **Modelo matemático** | Básico: fatiga sigmoidea → horas efectivas → Shadow-Score. | Multifactorial: añade trabajo remunerado, composición hogar, dependientes, percepción. | Mismo que v2, más **coste de oportunidad** (horas y PPA). | **Mismo modelo que v3** – se aplica idénticamente a estudiantes individuales y a lotes CSV. |
-| **Variables de entrada (estudiante)** | Género, estrato, horas domésticas, horas estudio, promedio, dependientes. | Añade composición hogar, trabajo remunerado (sí/no + horas). | Igual que v2. | Igual que v3. |
-| **Entrada masiva (administrativo)** | No aplica. | No aplica. | No aplica. | Archivo CSV con misma estructura base + `id_estudiante`. Se procesa por **ETL** (validación, limpieza, transformación) usando Pandas. |
-| **Simulación de escenarios** | Corresponsabilidad (reducción fija 40%). | Corresponsabilidad + apoyo institucional (reduce fatiga). | Igual que v2. | Individual (estudiante) y **agregada** (administrativo puede simular reducción de carga doméstica en toda la muestra). |
-| **Asistente IA** | No. | No. | **Sí** (OpenAI/Gemini) para planes personalizados del estudiante. | **Sí para estudiante**; **No para administrativo** (por manejo de datos sensibles). |
-| **Dashboards / visualización** | Gráficos individuales (radar, barras, gauge). | Ídem. | Ídem. | **Añade dashboards institucionales**: distribución de Shadow-Score, brechas de género, segmentación por estrato, simulación agregada, exportación de reportes. |
-| **Procesamiento de datos** | En memoria por sesión. | En memoria por sesión. | En memoria por sesión. | **ETL + estructuras internas (Pandas)**; no se usa base de datos externa. |
-| **Tecnologías clave** | Streamlit, Pandas, NumPy, Plotly. | Las mismas. | Las mismas + OpenAI/Gemini API. | Las mismas + **ETL con Pandas**, autenticación para rol administrativo. |
-| **Privacidad y seguridad** | No almacenar datos personales. | Ídem. | Ídem. | **Sin IA en rol admin**, anonimización, autenticación, cumplimiento Ley 1581. Los CSV no se conservan. |
-| **Despliegue** | Streamlit Cloud. | Streamlit Cloud. | Streamlit Cloud. | Streamlit Cloud. |
-| **Énfasis principal** | Visibilizar pobreza de tiempo. | Reconocer multifactorialidad. | Transformar reflexión en acción (IA). | **Dotar a la institución de herramientas de análisis masivo** para la toma de decisiones en equidad y permanencia. |
+La evolución de Shadow-Score Académico se organizó en ciclos claros de desarrollo. Cada versión incorporó mejoras técnicas concretas, hasta llegar a la versión final, que combina modelo matemático calibrado, IA estable y análisis masivo institucional.
 
-## Resumen evolutivo
+### Versión 1 — Base conceptual
+- Implementación inicial del concepto de Shadow-Score: fatiga sigmoidea, horas efectivas de estudio y resultado interpretativo.
+- Interfaz básica de Streamlit para ingreso de datos individuales del estudiante.
+- Validación simple de rangos en los datos de entrada.
+- Enfoque centrado en la carga doméstica como factor de impacto académico.
 
-- **Versión 1** – Prueba de concepto centrada en la carga doméstica.
-- **Versión 2** – Modelo más realista al incluir trabajo remunerado y composición del hogar.
-- **Versión 3** – Salto cualitativo: la IA genera planes de acción personalizados.
-- **Versión 4** – Expansión al ámbito institucional: permite a la universidad cargar datos de múltiples estudiantes, procesarlos mediante ETL (mismo modelo), visualizar dashboards agregados y simular políticas de corresponsabilidad a nivel de muestra, **sin exponer datos sensibles a IA externa**.
+### Versión 2 — Modelo multifactorial
+- Ampliación del modelo matemático con variables adicionales:
+  - trabajo remunerado,
+  - composición del hogar,
+  - dependientes,
+  - estrato socioeconómico.
+- Ajuste de coeficientes y ponderaciones para reflejar movilidad social y apoyos.
+- Gráficos mejorados con Plotly para mostrar distribución de cargas y fatiga.
+- Preparación de la estructura para aplicar el mismo modelo en lotes de datos.
 
-La **versión 4** es la actualmente en producción, pues cubre tanto la experiencia individual del estudiante (con IA) como las necesidades de análisis institucional de Unicafam.
+### Versión 3 — Asistente de IA
+- Integración de un asistente de inteligencia artificial para planes de acción personalizados.
+- Generación de prompts y uso de API externa para producir recomendaciones basadas en coste de oportunidad.
+- Conservación del modelo matemático de v2, con agregados de costo en horas y PPA.
+- Inclusión de un flujo de interacción donde el estudiante recibe sugerencias de redistribución de tiempo.
+
+### Versión 4 — Módulo administrativo
+- Desarrollo del panel administrativo con carga masiva de CSV y procesamiento ETL en Pandas.
+- Implementación de validación, limpieza, deduplicación e imputación en el flujo de datos.
+- Dashboard institucional con indicadores agregados: Shadow-Score, brechas de género, estrato y composición del hogar.
+- Separación explícita de la lógica de IA: el rol administrativo no consume modelos externos.
+- Almacenamiento de resultados en `st.session_state` para manejo en sesión activa.
+
+### Versión 5 — Versión final del proyecto
+- Versión final de producción con modelo calibrado a los datos de la ENUT 2024-2025.
+- Ajuste de coeficientes y factores de la fórmula para mejorar robustez e interpretabilidad.
+- Asistente IA estabilizado con NVIDIA Mistral Medium 3.5 y clave gestionada por `st.secrets`.
+- Consolidación del módulo administrativo: procesamiento masivo confiable, dashboards estabilizados y protección de datos sensibles.
+- El proyecto finaliza con una arquitectura modular y lista para despliegue en Streamlit Cloud.
+
+## Resumen técnico
+- La versión 5 es la versión final del proyecto.
+- Mantiene el modelo multifactorial de v2 y la IA de v3.
+- Añade el módulo administrativo de v4 con calibración y consolidación para producción.
+- Se entrega como la versión más estable y completa, adecuada para uso individual y análisis institucional.

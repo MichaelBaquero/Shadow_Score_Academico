@@ -1,20 +1,13 @@
 """
-Modelo matemático para Shadow-Score Académico (v3.1)
-=====================================================
-Parámetros calibrados con base en la ENUT 2024-2025 del DANE
-(Boletín técnico: resultados preliminares octubre 2024 – marzo 2025,
-publicado el 28 de octubre de 2025).
+Modelo matemático para Shadow-Score Académico (v5).
 
-Fuentes complementarias para coeficientes PPA:
-    - Revista Universidad EAFIT (2010). Determinantes del rendimiento
-      académico en Colombia. Vol. 46, No. 160.
-    - Redalyc / UdeG (2013). Trabajo y rendimiento escolar de los
-      estudiantes universitarios.
-    - Guevara (2021). Relación de la actividad laboral en el rendimiento
-      académico. Unipamplona.
+Este módulo contiene la lógica de cálculo del índice de fatiga,
+las horas efectivas de estudio, la estimación del PPA y el Shadow-Score.
+Los parámetros se han calibrado para la versión final del proyecto,
+con base en la ENUT 2024-2025 y literatura complementaria.
 
-Los coeficientes marcados con [SUPUESTO] deben reemplazarse con
-regresión sobre datos locales cuando se cuente con n ≥ 150 registros.
+Los coeficientes marcados con [SUPUESTO] deben revisarse cuando se
+cuente con datos locales suficientes (n ≥ 150) para una regresión.
 """
 
 import math

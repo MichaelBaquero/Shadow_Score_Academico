@@ -1,6 +1,7 @@
-"""
-Shadow-Score Académico - Página de Resultados del Estudiante (v14 - Gráfico 6 meses con hover)
-=========================================================================================
+"""Página de resultados del estudiante de Shadow-Score Académico.
+
+Muestra los resultados del modelo, interpretaciones y la opción de
+generar un plan de acción personalizado con IA.
 """
 
 import streamlit as st

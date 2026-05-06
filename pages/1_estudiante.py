@@ -1,21 +1,7 @@
-"""
-Shadow-Score Académico - Página del Estudiante (v5 - namespace separation)
-==========================================================================
-ARQUITECTURA DE SESSION_STATE:
-  - Claves _w_*  → propiedad exclusiva de Streamlit (widgets).
-                   Nunca se borran manualmente; Streamlit las gestiona.
-  - Claves ss_*  → propiedad exclusiva de la aplicación (dominio).
-                   Son snapshots inmutables tomados al pulsar el botón.
+"""Página del estudiante para Shadow-Score Académico.
 
-FLUJO:
-  1. Si no existe ss_run_id → sesión nueva → limpiar solo ss_*.
-  2. El usuario rellena el formulario; los _w_* se actualizan en tiempo real.
-  3. Al pulsar "Calcular":
-       a. Leer _w_* para validar (valores actuales del formulario).
-       b. Si válido → nuevo ss_run_id + snapshots ss_perfil/ss_cargas/ss_promedio.
-       c. Borrar ss_resultados y ss_escenarios (forzar recálculo en resultados).
-       d. Redirigir a resultados.
-  4. Al volver desde resultados → limpiar solo ss_* → _w_* intactos.
+Contiene el formulario de entrada de datos, validación y redireccionamiento
+hacia la página de resultados.
 """
 
 import uuid

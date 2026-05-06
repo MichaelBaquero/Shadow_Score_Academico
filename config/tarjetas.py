@@ -1,4 +1,8 @@
-# config/tarjetas.py
+"""Configuración de tarjetas de navegación para Shadow-Score Académico.
+
+Define los elementos visibles en la página de inicio para cada rol.
+"""
+
 TARJETA_ESTUDIANTE = {
     "ruta": "pages/1. estudiante.py",
     "emoji": "👩‍🎓",

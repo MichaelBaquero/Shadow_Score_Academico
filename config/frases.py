@@ -1,4 +1,8 @@
-# Lista de frases (usando <strong> para negritas)
+"""Frases informativas usadas en la página de inicio del proyecto.
+
+Se emplean para resaltar datos clave de la investigación y el contexto de género.
+"""
+
 FRASES = [
     "📊 <strong>Dato DANE (ENUT 2024-2025)</strong>: Las mujeres dedican en promedio 7 horas y 35 minutos diarios a trabajo no remunerado; los hombres 3 horas y 12 minutos.",
     "⚖️ <strong>ODS 5 (Igualdad de género)</strong>: Reducir la carga de cuidados no remunerados es clave para cerrar brechas económicas y educativas.",

@@ -1,3 +1,9 @@
+"""Validación de archivos CSV para el módulo administrativo.
+
+Este módulo valida que el archivo cargado cumpla la estructura,
+los tipos y los valores esperados para el procesamiento ETL.
+"""
+
 import pandas as pd
 from typing import List, Dict, Optional, Tuple
 
@@ -9,10 +15,12 @@ def validar_archivo_csv(
     max_horas_semanales: float = 168.0,
 ) -> Tuple[bool, Optional[pd.DataFrame], List[str]]:
     """
-    Valida un CSV con la estructura requerida por Shadow-Score Académico.
-    Ahora los IDs duplicados son errores y se informan TODOS los fallos de una vez.
+    Valida un CSV para el procesamiento administrativo del proyecto.
 
-    Retorna (es_valido, DataFrame_depurado, lista_de_mensajes).
+    Verifica columnas obligatorias, tipos numéricos, rangos, categorías válidas,
+    duplicados de ID y suma de horas semanales.
+
+    Retorna (es_valido, df_limpio, mensajes_de_error).
     """
     if columnas_esperadas is None:
         columnas_esperadas = [

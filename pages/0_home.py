@@ -1,6 +1,6 @@
-"""
-Shadow-Score Académico - Página de Inicio (Home)
-Versión con tarjetas personalizadas, redirección funcional y carrusel con indicadores.
+"""Página de inicio de Shadow-Score Académico.
+
+Ofrece la navegación principal hacia el módulo de estudiante y el módulo administrativo.
 """
 
 import sys
@@ -180,7 +180,7 @@ st.markdown(
     """
     <div style="text-align: center; color: #6c757d; font-size: 0.8rem;">
     Basado en datos del DANE, ENUT, ODS 5 y estudios colombianos sobre fatiga académica y corresponsabilidad.<br>
-    Shadow-Score Académico v3.0 - Transformando la reflexión en acción.
+    Shadow-Score Académico v5 — versión final del proyecto, lista para uso individual e institucional.
     </div>
     """,
     unsafe_allow_html=True

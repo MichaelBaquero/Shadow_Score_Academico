@@ -1,3 +1,10 @@
+"""Página administrativa de Shadow-Score Académico.
+
+Esta página permite al usuario administrativo cargar archivos CSV,
+validarlos, procesarlos mediante ETL y preparar los datos para los
+dashboards institucionales.
+"""
+
 import streamlit as st
 import pandas as pd
 import sys
