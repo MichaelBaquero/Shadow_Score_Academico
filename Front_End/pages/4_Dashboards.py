@@ -6,6 +6,11 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
+import sys
+from pathlib import Path
+
+# ── Agregar rutas para imports ──
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # ── Configuración de página ──
 st.set_page_config(page_title="Shadow-Score · Admin", layout="wide")

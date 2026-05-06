@@ -19,7 +19,12 @@ FLUJO:
 """
 
 import uuid
+import sys
+from pathlib import Path
 import streamlit as st
+
+# Agregar Front_End al path para importar config
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # ── Importaciones del proyecto ──────────────────────────────────────────────
 try:

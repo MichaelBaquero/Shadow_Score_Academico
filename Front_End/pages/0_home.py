@@ -4,8 +4,14 @@ Versión con tarjetas personalizadas, redirección funcional y carrusel con indi
 """
 
 import os
+import sys
+from pathlib import Path
 import streamlit as st
 import json
+
+# Agregar Front_End al path para importar config
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 from config.estilos_comunes import aplicar_estilos_globales
 from config.frases import FRASES
 from config.tarjetas import TARJETA_ESTUDIANTE, TARJETA_ADMIN
