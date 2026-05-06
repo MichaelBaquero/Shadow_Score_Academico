@@ -1,6 +1,6 @@
 # Lista de frases (usando <strong> para negritas)
 FRASES = [
-    "📊 <strong>Dato DANE (ENUT 2021)</strong>: Las mujeres dedican en promedio 6.8 horas diarias a trabajo doméstico no remunerado; los hombres 3.0 horas.",
+    "📊 <strong>Dato DANE (ENUT 2024-2025)</strong>: Las mujeres dedican en promedio 7 horas y 35 minutos diarios a trabajo no remunerado; los hombres 3 horas y 12 minutos.",
     "⚖️ <strong>ODS 5 (Igualdad de género)</strong>: Reducir la carga de cuidados no remunerados es clave para cerrar brechas económicas y educativas.",
     "🧠 <strong>Reflexión</strong>: El cansancio cognitivo por doble jornada puede reducir hasta un 30% las horas efectivas de estudio.",
     "🏫 <strong>Corresponsabilidad</strong>: Si se redistribuye el 40% de las tareas domésticas, el Shadow-Score puede disminuir hasta en 20 puntos.",
