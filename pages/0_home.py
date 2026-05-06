@@ -214,7 +214,7 @@ carousel_html = f"""
 </script>
 """
 
-st.components.v1.html(carousel_html, height=190)
+st.html(carousel_html)
 
 # =========================================================
 # PIE DE PÁGINA (CRÉDITOS Y FUENTES)
