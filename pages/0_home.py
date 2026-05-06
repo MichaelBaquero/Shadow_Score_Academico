@@ -1,6 +1,6 @@
 """
 Shadow-Score Académico - Página de Inicio (Home)
-Versión con tarjetas personalizadas, redirección funcional y carrusel nativo Streamlit.
+Versión con tarjetas personalizadas, redirección funcional y carrusel con indicadores.
 """
 
 import os
@@ -8,7 +8,6 @@ import sys
 import time
 from pathlib import Path
 import streamlit as st
-import json
 
 # Agregar raíz al path para importar config
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -130,7 +129,19 @@ if time.time() - st.session_state.frase_last_update >= 10:
 
 frase_actual = FRASES[st.session_state.frase_idx]
 
-# Frase actual
+# Generar dots en HTML puro
+dots_html = "".join([
+    f"""<div style="
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background-color: {'#3b82f6' if i == st.session_state.frase_idx else '#cbd5e1'};
+        transition: background-color 0.3s ease;
+    "></div>"""
+    for i in range(len(FRASES))
+])
+
+# Carrusel completo en HTML
 st.markdown(
     f"""
     <div style="
@@ -138,34 +149,33 @@ st.markdown(
         border-radius: 28px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.05);
         margin-top: 1rem;
-        padding: 1.5rem;
-        text-align: center;
-        font-size: 1.15rem;
-        font-weight: 500;
-        color: #1e293b;
-        line-height: 1.5;
-        min-height: 80px;
+        padding: 1.5rem 2rem;
     ">
-        {frase_actual}
+        <div style="
+            text-align: center;
+            font-size: 1.15rem;
+            font-weight: 500;
+            color: #1e293b;
+            line-height: 1.5;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        ">
+            {frase_actual}
+        </div>
+        <div style="
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 16px;
+        ">
+            {dots_html}
+        </div>
     </div>
     """,
     unsafe_allow_html=True
 )
-
-# Dots interactivos
-cols = st.columns(len(FRASES))
-for i, col in enumerate(cols):
-    with col:
-        if i == st.session_state.frase_idx:
-            st.markdown(
-                "<div style='width:10px;height:10px;border-radius:50%;background:#3b82f6;margin:auto;margin-top:8px;'></div>",
-                unsafe_allow_html=True
-            )
-        else:
-            if st.button("⚬", key=f"dot_{i}", help=f"Frase {i+1}"):
-                st.session_state.frase_idx = i
-                st.session_state.frase_last_update = time.time()
-                st.rerun()
 
 # =========================================================
 # PIE DE PÁGINA
