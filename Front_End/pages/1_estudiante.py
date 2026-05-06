@@ -84,9 +84,19 @@ st.markdown(f"""
         background-color: #dbeafe !important;
         border-radius: 8px !important;
         color: #1e293b !important;
+        border: 2px solid #3b82f6 !important;
+    }}
+    div[data-baseweb="select"] > div {{
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
     }}
     div[data-baseweb="select"] > div * {{
         color: #1e293b !important;
+        font-weight: 500 !important;
+    }}
+    div[data-baseweb="select"] input,
+    div[data-baseweb="select"] [role="combobox"] {{
+        color: #1e293b !important;
+        font-weight: 500 !important;
     }}
 
     /* ── Dropdown (popover) ── */
@@ -109,9 +119,6 @@ st.markdown(f"""
     }}
     div[data-baseweb="popover"] div[role="option"]:hover {{
         background-color: #334155 !important;
-    }}
-    div[data-baseweb="popover"] * {{
-        color: #f1f5f9 !important;
     }}
 
     /* ── Overlay transparente (evita fondo oscuro en dropdowns) ── */

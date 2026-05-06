@@ -130,35 +130,32 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ════════════════════════════════════════════════════════════════
-# 1. DATOS DE EJEMPLO
+# CARGA DE DATOS REALES PROCESADOS
 # ════════════════════════════════════════════════════════════════
-np.random.seed(42)
-n_estudiantes = 247
+if "df_resultados" not in st.session_state or st.session_state.df_resultados is None:
+    st.warning("No hay datos procesados. Por favor carga y procesa un archivo CSV desde la página de Administración.")
+    st.page_link("pages/2_Administrativo.py", label="Ir a Administración", icon="⬅️")
+    st.stop()
 
-data = {
-    "id_estudiante": [f"EST-{i:04d}" for i in range(n_estudiantes)],
-    "genero": np.random.choice(["Femenino", "Masculino"], n_estudiantes, p=[0.52, 0.48]),
-    "estrato": np.random.choice([1, 2, 3, 4, 5, 6], n_estudiantes, p=[0.25, 0.30, 0.25, 0.12, 0.05, 0.03]),
-    "horas_domesticas": np.random.normal(30, 12, n_estudiantes).clip(0, 80),
-    "horas_trabajo": np.random.normal(15, 10, n_estudiantes).clip(0, 60),
-    "horas_estudio": np.random.normal(25, 8, n_estudiantes).clip(5, 60),
-    "fatiga": np.random.beta(4, 4, n_estudiantes),
-    "shadow_score": np.random.normal(48, 18, n_estudiantes).clip(0, 100),
-    "horas_efectivas": np.random.normal(18, 7, n_estudiantes).clip(0, 50),
-}
-df = pd.DataFrame(data)
+df = st.session_state.df_resultados.copy()
 
+# Función para categorizar el Shadow-Score
 def categorizar(score):
-    if score <= 20: return "Baja"
-    elif score <= 40: return "Moderada"
-    elif score <= 60: return "Significativa"
-    elif score <= 80: return "Alta"
-    else: return "Extrema"
+    if score <= 20:
+        return "Baja"
+    elif score <= 40:
+        return "Moderada"
+    elif score <= 60:
+        return "Significativa"
+    elif score <= 80:
+        return "Alta"
+    else:
+        return "Extrema"
 
 df["categoria"] = df["shadow_score"].apply(categorizar)
 
 # ════════════════════════════════════════════════════════════════
-# 2. TARJETAS DE RESUMEN
+# TARJETAS DE RESUMEN (con datos reales)
 # ════════════════════════════════════════════════════════════════
 col1, col2, col3 = st.columns(3)
 
@@ -168,22 +165,28 @@ with col1:
     <div class="metric-card">
         <div class="metric-label">🎓 Estudiantes analizados</div>
         <div class="metric-value" style="color:{COLOR_PRIMARIO}">{total}</div>
-        <div class="metric-subtext">Registros cargados</div>
+        <div class="metric-subtext">Registros procesados</div>
     </div>
     """, unsafe_allow_html=True)
 
 with col2:
     shadow_mean = df["shadow_score"].mean()
-    cat = df["categoria"].mode()[0]
+    # Moda (valor más frecuente), si hay empate se toma el primero
+    cat = df["categoria"].mode()
+    if not cat.empty:
+        cat_str = cat[0]
+    else:
+        cat_str = "—"
     st.markdown(f"""
     <div class="metric-card">
         <div class="metric-label">📈 Shadow‑Score medio</div>
         <div class="metric-value" style="color:#f59e0b;">{shadow_mean:.1f}%</div>
-        <div class="metric-subtext">Categoría "{cat}"</div>
+        <div class="metric-subtext">Categoría "{cat_str}"</div>
     </div>
     """, unsafe_allow_html=True)
 
 with col3:
+    # fatiga es un valor entre 0 y 1, lo convertimos a porcentaje
     fatiga_mean = df["fatiga"].mean() * 100
     st.markdown(f"""
     <div class="metric-card">
@@ -196,20 +199,22 @@ with col3:
 st.markdown('<hr class="section-divider">', unsafe_allow_html=True)
 
 # ════════════════════════════════════════════════════════════════
-# 3. MÉTRICAS INSTITUCIONALES (4 GRÁFICOS EN TARJETAS)
+# MÉTRICAS INSTITUCIONALES (4 GRÁFICOS EN TARJETAS)
 # ════════════════════════════════════════════════════════════════
 st.markdown("## 📈 Métricas institucionales")
 
 c1, c2, c3, c4 = st.columns(4)
 
-# ── Gráfico 1: Shadow-Score (Barras) ──
+# ── Gráfico 1: Distribución de Shadow-Score ──
 with c1:
     st.markdown('<div class="chart-title">Shadow-Score</div>', unsafe_allow_html=True)
-    cat_counts = df["categoria"].value_counts().reindex(["Baja","Moderada","Significativa","Alta","Extrema"], fill_value=0)
+    cat_counts = df["categoria"].value_counts().reindex(
+        ["Baja", "Moderada", "Significativa", "Alta", "Extrema"], fill_value=0
+    )
     fig1 = go.Figure(data=[go.Bar(
         x=cat_counts.index,
         y=cat_counts.values,
-        marker_color=["#10b981","#f59e0b","#fbbf24","#f87171","#ef4444"],
+        marker_color=["#10b981", "#f59e0b", "#fbbf24", "#f87171", "#ef4444"],
         text=cat_counts.values,
         textposition='outside',
         textfont=dict(color=COLOR_NEGRO, size=10)
@@ -228,14 +233,14 @@ with c1:
 # ── Gráfico 2: Fatiga media (Gauge) ──
 with c2:
     st.markdown('<div class="chart-title">Fatiga media</div>', unsafe_allow_html=True)
-    fatiga_prom = df["fatiga"].mean() * 100
     fig2 = go.Figure(go.Indicator(
         mode="gauge+number",
-        value=fatiga_prom,
+        value=fatiga_mean,
         number={"font": {"size": 32, "color": COLOR_NEGRO}},
         domain={"x": [0, 1], "y": [0, 1]},
         gauge={
-            "axis": {"range": [0, 100], "tickwidth": 1, "tickcolor": COLOR_NEGRO, "tickfont": {"size": 10, "color": COLOR_NEGRO}},
+            "axis": {"range": [0, 100], "tickwidth": 1, "tickcolor": COLOR_NEGRO,
+                     "tickfont": {"size": 10, "color": COLOR_NEGRO}},
             "bar": {"color": "#2563eb", "thickness": 0.25},
             "steps": [
                 {"range": [0, 30], "color": "#10b981"},
@@ -253,13 +258,14 @@ with c2:
     )
     st.plotly_chart(fig2, width='stretch', config={'displayModeBar': False})
 
-# ── Gráfico 3: Brecha de género (Barras) ──
+# ── Gráfico 3: Brecha de género en Shadow-Score ──
 with c3:
     st.markdown('<div class="chart-title">Brecha de género</div>', unsafe_allow_html=True)
-    gen_agg = df.groupby("genero")["shadow_score"].mean().reset_index()
+    # Asegurar que la columna se llame 'Género' (ya viene del CSV)
+    gen_agg = df.groupby("Género")["shadow_score"].mean().reset_index()
     fig3 = px.bar(
-        gen_agg, x="genero", y="shadow_score",
-        color="genero",
+        gen_agg, x="Género", y="shadow_score",
+        color="Género",
         color_discrete_map={"Femenino": "#f472b6", "Masculino": "#60a5fa"},
         text="shadow_score"
     )
@@ -279,7 +285,7 @@ with c3:
     )
     st.plotly_chart(fig3, width='stretch', config={'displayModeBar': False})
 
-# ── Gráfico 4: Horas efectivas (Histograma) ──
+# ── Gráfico 4: Distribución de horas efectivas ──
 with c4:
     st.markdown('<div class="chart-title">Horas efectivas</div>', unsafe_allow_html=True)
     fig4 = go.Figure(data=[go.Histogram(
@@ -303,28 +309,25 @@ with c4:
     st.plotly_chart(fig4, width='stretch', config={'displayModeBar': False})
 
 # ════════════════════════════════════════════════════════════════
-# 4. TABLA DE DATOS
+# TABLA DE DATOS COMPLETA
 # ════════════════════════════════════════════════════════════════
 st.markdown("---")
 st.markdown("## 📋 Tabla de resultados")
 
-tabla_mostrar = df[[
-    "id_estudiante",
-    "genero",
-    "estrato",
-    "horas_domesticas",
-    "horas_trabajo",
-    "horas_estudio",
-    "horas_efectivas",
-    "fatiga",
-    "shadow_score",
-    "categoria"
-]].copy()
+# Seleccionar y renombrar columnas para la visualización
+columnas_para_tabla = [
+    "IDEstudiante", "Género", "Estrato",
+    "CargaDomestica", "CargaLaboral", "CargaAcademica",
+    "horas_efectivas", "fatiga", "shadow_score", "categoria"
+]
+tabla_mostrar = df[columnas_para_tabla].copy()
 
+# Convertir fatiga a porcentaje (viene entre 0-1)
 tabla_mostrar["fatiga"] = (tabla_mostrar["fatiga"] * 100).round(1)
 tabla_mostrar["shadow_score"] = tabla_mostrar["shadow_score"].round(1)
 tabla_mostrar["horas_efectivas"] = tabla_mostrar["horas_efectivas"].round(1)
 
+# Traducir nombres para la vista
 tabla_mostrar.columns = [
     "ID Estudiante", "Género", "Estrato",
     "Horas domésticas", "Horas trabajo", "Horas estudio",
@@ -342,4 +345,4 @@ st.dataframe(
     height=400
 )
 
-st.caption(f"📌 Total registros: {len(df)}. Datos simulados para demostración visual.")
+st.caption(f"📌 Total registros: {len(df)}. Datos reales procesados desde el archivo CSV.")
