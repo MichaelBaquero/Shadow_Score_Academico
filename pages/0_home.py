@@ -110,7 +110,7 @@ with col2:
 st.markdown("---")
 
 # =========================================================
-# CARRUSEL CON st.fragment (auto-avance real en la nube)
+# CARRUSEL CON st.fragment
 # =========================================================
 
 @st.fragment(run_every=10)
@@ -120,14 +120,16 @@ def carrusel():
     else:
         st.session_state.frase_idx = (st.session_state.frase_idx + 1) % len(FRASES)
 
-    frase_actual = FRASES[st.session_state.frase_idx]
+    idx = st.session_state.frase_idx
+    frase_actual = FRASES[idx]
 
     dots_html = "".join([
         f"""<div style="
-            width: 8px;
-            height: 8px;
+            width: {'10px' if i == idx else '8px'};
+            height: {'10px' if i == idx else '8px'};
             border-radius: 50%;
-            background-color: {'#3b82f6' if i == st.session_state.frase_idx else '#cbd5e1'};
+            background-color: {'#3b82f6' if i == idx else '#cbd5e1'};
+            transition: all 0.3s ease;
         "></div>"""
         for i in range(len(FRASES))
     ])
@@ -137,28 +139,29 @@ def carrusel():
         <div style="
             background: {COLOR_FONDO_CARRUSEL};
             border-radius: 28px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.07);
             margin-top: 1rem;
-            padding: 2rem 2.5rem;
+            padding: 2.5rem 3rem;
+            min-height: 140px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
         ">
             <div style="
                 text-align: center;
-                font-size: 1.1rem;
-                font-weight: 500;
+                font-size: 1.15rem;
                 color: #1e293b;
-                line-height: 1.7;
-                min-height: 70px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
+                line-height: 1.8;
             ">
                 {frase_actual}
             </div>
             <div style="
                 display: flex;
                 justify-content: center;
+                align-items: center;
                 gap: 8px;
-                margin-top: 20px;
+                margin-top: 24px;
             ">
                 {dots_html}
             </div>
