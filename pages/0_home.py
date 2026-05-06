@@ -3,13 +3,11 @@ Shadow-Score Académico - Página de Inicio (Home)
 Versión con tarjetas personalizadas, redirección funcional y carrusel con indicadores.
 """
 
-import os
 import sys
 import time
 from pathlib import Path
 import streamlit as st
 
-# Agregar raíz al path para importar config
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from config.estilos_comunes import aplicar_estilos_globales
@@ -79,7 +77,7 @@ def render_tarjeta(archivo_pagina, emoji, titulo, subtitulo, color_fondo=None, n
     return html
 
 # =========================================================
-# TARJETAS DE ROL (ESTUDIANTE / ADMINISTRATIVO)
+# TARJETAS DE ROL
 # =========================================================
 col1, col2 = st.columns(2, gap="large")
 
@@ -112,70 +110,64 @@ with col2:
 st.markdown("---")
 
 # =========================================================
-# CARRUSEL DE FRASES CON INDICADORES
+# CARRUSEL CON st.fragment (auto-avance real en la nube)
 # =========================================================
 
-# Inicializar estado
-if "frase_idx" not in st.session_state:
-    st.session_state.frase_idx = 0
-if "frase_last_update" not in st.session_state:
-    st.session_state.frase_last_update = time.time()
+@st.fragment(run_every=10)
+def carrusel():
+    if "frase_idx" not in st.session_state:
+        st.session_state.frase_idx = 0
+    else:
+        st.session_state.frase_idx = (st.session_state.frase_idx + 1) % len(FRASES)
 
-# Auto-avance cada 10 segundos
-if time.time() - st.session_state.frase_last_update >= 10:
-    st.session_state.frase_idx = (st.session_state.frase_idx + 1) % len(FRASES)
-    st.session_state.frase_last_update = time.time()
-    st.rerun()
+    frase_actual = FRASES[st.session_state.frase_idx]
 
-frase_actual = FRASES[st.session_state.frase_idx]
+    dots_html = "".join([
+        f"""<div style="
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: {'#3b82f6' if i == st.session_state.frase_idx else '#cbd5e1'};
+        "></div>"""
+        for i in range(len(FRASES))
+    ])
 
-# Generar dots en HTML puro
-dots_html = "".join([
-    f"""<div style="
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background-color: {'#3b82f6' if i == st.session_state.frase_idx else '#cbd5e1'};
-        transition: background-color 0.3s ease;
-    "></div>"""
-    for i in range(len(FRASES))
-])
-
-# Carrusel completo en HTML
-st.markdown(
-    f"""
-    <div style="
-        background: {COLOR_FONDO_CARRUSEL};
-        border-radius: 28px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-        margin-top: 1rem;
-        padding: 1.5rem 2rem;
-    ">
+    st.markdown(
+        f"""
         <div style="
-            text-align: center;
-            font-size: 1.15rem;
-            font-weight: 500;
-            color: #1e293b;
-            line-height: 1.5;
-            min-height: 80px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            background: {COLOR_FONDO_CARRUSEL};
+            border-radius: 28px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            margin-top: 1rem;
+            padding: 2rem 2.5rem;
         ">
-            {frase_actual}
+            <div style="
+                text-align: center;
+                font-size: 1.1rem;
+                font-weight: 500;
+                color: #1e293b;
+                line-height: 1.7;
+                min-height: 70px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            ">
+                {frase_actual}
+            </div>
+            <div style="
+                display: flex;
+                justify-content: center;
+                gap: 8px;
+                margin-top: 20px;
+            ">
+                {dots_html}
+            </div>
         </div>
-        <div style="
-            display: flex;
-            justify-content: center;
-            gap: 8px;
-            margin-top: 16px;
-        ">
-            {dots_html}
-        </div>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+        """,
+        unsafe_allow_html=True
+    )
+
+carrusel()
 
 # =========================================================
 # PIE DE PÁGINA
