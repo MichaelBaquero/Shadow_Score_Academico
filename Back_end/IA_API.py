@@ -1,6 +1,7 @@
 """
 Módulo de conexión con la API de NVIDIA (Mistral) para Shadow-Score Académico.
 ================================================================================
+- Compatible con ejecución local y Streamlit Cloud.
 - Timeout configurable para prompts largos (hasta 10 minutos).
 - Reintentos automáticos para errores transitorios (5xx).
 - Cualquier error externo lanza NvidiaAPIError con mensaje amigable.
@@ -18,12 +19,12 @@ _MARKER = ".streamlit"
 
 # ── Configuración de la API de NVIDIA ────────────────────────────────────────
 INVOKE_URL = "https://integrate.api.nvidia.com/v1/chat/completions"
-MODEL_NAME = "mistralai/mistral-medium-3.5-128b"   # Verifica vigencia
+MODEL_NAME = "mistralai/mistral-medium-3.5-128b"
 STREAM = False
 
 # ── Configuración de timeout (en segundos) ───────────────────────────────────
-CONNECT_TIMEOUT = 60      # Tiempo para establecer conexión TCP
-READ_TIMEOUT = 600        # Tiempo máximo para leer la respuesta (10 minutos)
+CONNECT_TIMEOUT = 60
+READ_TIMEOUT = 600
 
 class NvidiaAPIError(Exception):
     """Excepción personalizada para fallos de conexión con NVIDIA."""
@@ -55,7 +56,20 @@ def _encontrar_raiz_proyecto() -> Path:
     )
 
 def _cargar_api_key() -> str:
-    """Lee la API key desde .streamlit/secrets.toml."""
+    """
+    Lee la API key priorizando st.secrets (local y nube),
+    con fallback a lectura directa de secrets.toml para entornos sin Streamlit.
+    """
+    # ── Intento 1: st.secrets (funciona en local y Streamlit Cloud) ──────────
+    try:
+        import streamlit as st
+        api_key = st.secrets.get("NVIDIA_API_KEY")
+        if api_key:
+            return api_key
+    except Exception:
+        pass
+
+    # ── Intento 2: lectura directa del archivo (fallback local) ──────────────
     raiz = _encontrar_raiz_proyecto()
     ruta_secrets = raiz / _MARKER / "secrets.toml"
 
@@ -71,7 +85,7 @@ def _cargar_api_key() -> str:
     api_key = config.get("NVIDIA_API_KEY")
     if not api_key:
         raise ValueError(
-            "La clave 'NVIDIA_API_KEY' no está definida o está vacía en secrets.toml.\n"
+            "La clave 'NVIDIA_API_KEY' no está definida o está vacía.\n"
             f"Archivo leído: {ruta_secrets}"
         )
     return api_key
@@ -88,7 +102,7 @@ def generar_plan_mistral(prompt: str) -> str:
 
     Raises:
         NvidiaAPIError: siempre que falle la comunicación con NVIDIA.
-        FileNotFoundError: si falta secrets.toml.
+        FileNotFoundError: si falta secrets.toml y no hay st.secrets.
         ValueError: si falta la API key.
     """
     api_key = _cargar_api_key()
@@ -117,12 +131,10 @@ def generar_plan_mistral(prompt: str) -> str:
     )
     session.mount("https://", HTTPAdapter(max_retries=retries))
 
-    # Log para depuración
     print(f"📤 Enviando prompt de {len(prompt)} caracteres...")
     start = time.time()
 
     try:
-        # Timeout: (connect_timeout, read_timeout)
         response = session.post(
             INVOKE_URL,
             headers=headers,
@@ -157,7 +169,7 @@ def generar_plan_mistral(prompt: str) -> str:
         if e.response.status_code == 401:
             raise NvidiaAPIError(
                 "Autenticación fallida con NVIDIA. Verifica que tu API key sea válida "
-                "y esté correctamente configurada en .streamlit/secrets.toml."
+                "y esté correctamente configurada."
             )
         else:
             raise NvidiaAPIError(

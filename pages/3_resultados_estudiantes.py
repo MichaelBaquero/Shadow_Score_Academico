@@ -9,11 +9,8 @@ from pathlib import Path
 import plotly.graph_objects as go
 from datetime import datetime
 
-# ── Configurar rutas ──────────────────────────────────────────────────────────
-FRONT_END = Path(__file__).parent.parent
-sys.path.insert(0, str(FRONT_END))
-ROOT = FRONT_END.parent
-sys.path.insert(0, str(ROOT))
+# ── Configurar ruta de importación ──────────────────────────────────────────
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # ── Importaciones ─────────────────────────────────────────────────────────────
 from Back_end.modelo        import ejecutar_modelo

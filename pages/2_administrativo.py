@@ -5,10 +5,9 @@ from pathlib import Path
 from dataclasses import dataclass, field
 
 # ── Ajustar PATH para importar config y backend ──────────────────────────────────────────
-FRONT_END_ROOT = Path(__file__).parent.parent
-PROJECT_ROOT = FRONT_END_ROOT.parent
-sys.path.insert(0, str(FRONT_END_ROOT))
+PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
+
 from Back_end.validacion_csv import validar_archivo_csv
 
 # ── Estilos globales compartidos ─────────────────────────────────────────────────
