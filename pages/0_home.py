@@ -1,15 +1,16 @@
 """
 Shadow-Score Académico - Página de Inicio (Home)
-Versión con tarjetas personalizadas, redirección funcional y carrusel con indicadores.
+Versión con tarjetas personalizadas, redirección funcional y carrusel nativo Streamlit.
 """
 
 import os
 import sys
+import time
 from pathlib import Path
 import streamlit as st
 import json
 
-# Agregar Front_End al path para importar config
+# Agregar raíz al path para importar config
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from config.estilos_comunes import aplicar_estilos_globales
@@ -27,7 +28,6 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Aplicar estilos globales (sidebar oculta, tarjetas, etc.)
 aplicar_estilos_globales()
 
 # =========================================================
@@ -48,13 +48,9 @@ st.markdown(
 # FUNCIÓN PARA GENERAR TARJETAS CLICKEABLES
 # =========================================================
 def render_tarjeta(archivo_pagina, emoji, titulo, subtitulo, color_fondo=None, nombre_pagina=None):
-    """
-    Genera el HTML de una tarjeta interactiva con efecto hover.
-    La redirección se realiza a través del atributo 'href' que se le pasa.
-    """
     bg_color = color_fondo if color_fondo else "#ffffff"
     target_url = nombre_pagina if nombre_pagina else "#"
-    
+
     html = f"""
     <a style="text-decoration: none; display: block;" href="{target_url}">
         <div style="
@@ -120,104 +116,59 @@ st.markdown("---")
 # CARRUSEL DE FRASES CON INDICADORES
 # =========================================================
 
-frases_json = json.dumps(FRASES)
+# Inicializar estado
+if "frase_idx" not in st.session_state:
+    st.session_state.frase_idx = 0
+if "frase_last_update" not in st.session_state:
+    st.session_state.frase_last_update = time.time()
 
-carousel_html = f"""
-<style>
-    .carousel-container {{
+# Auto-avance cada 10 segundos
+if time.time() - st.session_state.frase_last_update >= 10:
+    st.session_state.frase_idx = (st.session_state.frase_idx + 1) % len(FRASES)
+    st.session_state.frase_last_update = time.time()
+    st.rerun()
+
+frase_actual = FRASES[st.session_state.frase_idx]
+
+# Frase actual
+st.markdown(
+    f"""
+    <div style="
         background: {COLOR_FONDO_CARRUSEL};
         border-radius: 28px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.05);
         margin-top: 1rem;
         padding: 1.5rem;
-    }}
-    .frase-texto {{
         text-align: center;
         font-size: 1.15rem;
         font-weight: 500;
         color: #1e293b;
         line-height: 1.5;
         min-height: 80px;
-        transition: opacity 0.6s ease-in-out;
-        opacity: 1;
-    }}
-    .frase-texto.fade-out {{
-        opacity: 0;
-    }}
-    .dots-container {{
-        display: flex;
-        justify-content: center;
-        gap: 8px;
-        margin-top: 20px;
-    }}
-    .dot {{
-        width: 6px;
-        height: 6px;
-        border-radius: 50%;
-        background-color: #cbd5e1;
-        transition: background-color 0.3s ease;
-    }}
-    .dot.active {{
-        background-color: #3b82f6;
-    }}
-</style>
+    ">
+        {frase_actual}
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
-<div class="carousel-container">
-    <div id="frase-texto" class="frase-texto">{FRASES[0]}</div>
-    <div class="dots-container" id="dots-container"></div>
-</div>
-
-<script>
-    const frases = {frases_json};
-    let currentIndex = 0;
-    const intervalTime = 10000; // 10 segundos
-    let isTransitioning = false;
-
-    const fraseDiv = document.getElementById('frase-texto');
-    const dotsContainer = document.getElementById('dots-container');
-
-    // Crear los puntos (sin eventos de clic)
-    frases.forEach((_, idx) => {{
-        const dot = document.createElement('div');
-        dot.classList.add('dot');
-        if (idx === currentIndex) dot.classList.add('active');
-        dotsContainer.appendChild(dot);
-    }});
-
-    function updateActiveDot() {{
-        const dots = document.querySelectorAll('.dot');
-        dots.forEach((dot, idx) => {{
-            if (idx === currentIndex) dot.classList.add('active');
-            else dot.classList.remove('active');
-        }});
-    }}
-
-    function setFrase(index) {{
-        if (isTransitioning) return;
-        isTransitioning = true;
-        fraseDiv.classList.add('fade-out');
-        setTimeout(() => {{
-            currentIndex = index;
-            fraseDiv.innerHTML = frases[currentIndex];
-            updateActiveDot();
-            fraseDiv.classList.remove('fade-out');
-            setTimeout(() => {{ isTransitioning = false; }}, 100);
-        }}, 300);
-    }}
-
-    function nextFrase() {{
-        const nextIndex = (currentIndex + 1) % frases.length;
-        setFrase(nextIndex);
-    }}
-
-    setInterval(nextFrase, intervalTime);
-</script>
-"""
-
-st.html(carousel_html)
+# Dots interactivos
+cols = st.columns(len(FRASES))
+for i, col in enumerate(cols):
+    with col:
+        if i == st.session_state.frase_idx:
+            st.markdown(
+                "<div style='width:10px;height:10px;border-radius:50%;background:#3b82f6;margin:auto;margin-top:8px;'></div>",
+                unsafe_allow_html=True
+            )
+        else:
+            if st.button("⚬", key=f"dot_{i}", help=f"Frase {i+1}"):
+                st.session_state.frase_idx = i
+                st.session_state.frase_last_update = time.time()
+                st.rerun()
 
 # =========================================================
-# PIE DE PÁGINA (CRÉDITOS Y FUENTES)
+# PIE DE PÁGINA
 # =========================================================
 st.markdown("---")
 st.markdown(
