@@ -524,7 +524,7 @@ with col_proc:
             st.success(f"✅ Procesados {len(df_resultados)} registros correctamente.")
 
             # ── 4. Redirigir
-            st.switch_page("pages/4_Dashboards.py")
+            st.switch_page("pages/4_dashboards.py")
     else:
         st.button("⚙️ Procesar", width='stretch', disabled=True,
                 key="btn_procesar_disabled")
