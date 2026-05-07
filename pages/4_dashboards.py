@@ -142,7 +142,7 @@ st.markdown(f"""
 # ════════════════════════════════════════════════════════════════
 if "df_resultados" not in st.session_state or st.session_state.df_resultados is None:
     st.warning("No hay datos procesados. Por favor carga y procesa un archivo CSV desde la página de Administración.")
-    st.page_link("pages/2_Administrativo.py", label="Ir a Administración", icon="⬅️")
+    st.page_link("pages/2_administrativo.py", label="Ir a Administración", icon="⬅️")
     st.stop()
 
 df = st.session_state.df_resultados.copy()
